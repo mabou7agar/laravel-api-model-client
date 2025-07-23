@@ -1,0 +1,16 @@
+/vendor
+/node_modules
+/composer.lock
+/phpunit.xml
+/.phpunit.result.cache
+/.idea
+/.vscode
+/.env
+/.env.backup
+/.phpunit.cache
+/coverage
+/.phpunit.result.cache
+/laravel9-test
+/laravel10-test
+/laravel11-test
+.DS_Store
