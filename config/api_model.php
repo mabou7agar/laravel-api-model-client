@@ -6,18 +6,30 @@ return [
     | API Model Configuration
     |--------------------------------------------------------------------------
     |
-    | This file contains configuration options for the API Model integration.
+    | This file contains configuration options for API model synchronization.
     |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Protocol
+    |--------------------------------------------------------------------------
+    |
+    | The protocol to use for API communication. Supported values are:
+    | - 'rest': Use RESTful HTTP API (default)
+    | - 'grpc': Use gRPC protocol
+    |
+    */
+    'protocol' => env('API_MODEL_PROTOCOL', 'rest'),
 
     /*
     |--------------------------------------------------------------------------
     | Queue Operations
     |--------------------------------------------------------------------------
     |
-    | When set to true, API operations (save, update, delete) will be queued
-    | instead of being executed synchronously. This improves application
-    | responsiveness but may introduce eventual consistency.
+    | Determine whether API operations should be queued for asynchronous processing.
+    | When set to true, API operations will be processed in the background,
+    | improving response times for the user.
     |
     */
     'queue_operations' => env('API_MODEL_QUEUE_OPERATIONS', true),
@@ -27,19 +39,19 @@ return [
     | Retry Attempts
     |--------------------------------------------------------------------------
     |
-    | The number of times to retry API operations before giving up.
-    | This applies to both synchronous operations and queued jobs.
+    | The number of times to retry API operations if they fail.
+    | A higher number provides more resilience but may increase processing time.
     |
     */
     'retry_attempts' => env('API_MODEL_RETRY_ATTEMPTS', 3),
 
     /*
     |--------------------------------------------------------------------------
-    | Sync in Testing Environment
+    | Sync in Testing
     |--------------------------------------------------------------------------
     |
-    | When set to true, API operations will be performed even in the testing
-    | environment. By default, API operations are disabled during testing.
+    | Determine whether API operations should be performed in testing environments.
+    | Setting this to false prevents API calls during automated tests.
     |
     */
     'sync_in_testing' => env('API_MODEL_SYNC_IN_TESTING', false),
@@ -49,9 +61,94 @@ return [
     | Queue Name
     |--------------------------------------------------------------------------
     |
-    | The name of the queue to use for API operations. This allows you to
-    | process API operations on a separate queue from other jobs.
+    | The name of the queue to use for API operations.
+    | This allows you to route API operations to a specific queue worker.
     |
     */
     'queue_name' => env('API_MODEL_QUEUE_NAME', 'api-sync'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings related to caching API responses.
+    |
+    */
+    'cache_enabled' => env('API_MODEL_CACHE_ENABLED', true),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Cache TTL (Time To Live)
+    |--------------------------------------------------------------------------
+    |
+    | The time in seconds that API responses should be cached.
+    | Default is 1 hour (3600 seconds).
+    |
+    */
+    'cache_ttl' => env('API_MODEL_CACHE_TTL', 3600),
+
+    /*
+    |--------------------------------------------------------------------------
+    | gRPC Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings specific to gRPC protocol.
+    |
+    */
+    'grpc' => [
+        /*
+        |--------------------------------------------------------------------------
+        | Service Definitions
+        |--------------------------------------------------------------------------
+        |
+        | Maps model classes to their corresponding gRPC service definitions.
+        | Each entry should contain:
+        | - 'client': The gRPC client class
+        | - 'methods': Mapping of operations to gRPC methods and request classes
+        |
+        | Example:
+        | 'App\Models\User' => [
+        |     'client' => 'App\Grpc\UserServiceClient',
+        |     'methods' => [
+        |         'get' => [
+        |             'method' => 'GetUser',
+        |             'request' => 'App\Grpc\GetUserRequest',
+        |         ],
+        |         'list' => [
+        |             'method' => 'ListUsers',
+        |             'request' => 'App\Grpc\ListUsersRequest',
+        |         ],
+        |         'create' => [
+        |             'method' => 'CreateUser',
+        |             'request' => 'App\Grpc\CreateUserRequest',
+        |         ],
+        |         'update' => [
+        |             'method' => 'UpdateUser',
+        |             'request' => 'App\Grpc\UpdateUserRequest',
+        |         ],
+        |         'delete' => [
+        |             'method' => 'DeleteUser',
+        |             'request' => 'App\Grpc\DeleteUserRequest',
+        |         ],
+        |     ],
+        | ],
+        */
+        'services' => [],
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Default Options
+        |--------------------------------------------------------------------------
+        |
+        | Default options for gRPC channel.
+        |
+        */
+        'options' => [
+            'credentials' => 'insecure', // 'insecure', 'ssl', or 'google_default'
+            'timeout' => 30, // seconds
+            'max_receive_message_length' => -1, // unlimited
+            'max_send_message_length' => -1, // unlimited
+        ],
+    ],
 ];

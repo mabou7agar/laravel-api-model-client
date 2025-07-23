@@ -3,6 +3,9 @@
 namespace ApiModelRelations\Traits;
 
 use ApiModelRelations\Jobs\SyncModelToApi;
+use ApiModelRelations\Factories\ApiClientFactory;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\App;
@@ -78,6 +81,16 @@ trait ApiModelInterfaceMethods
     }
 
     /**
+     * Get the cache TTL for API responses.
+     *
+     * @return int
+     */
+    public function getCacheTtl(): int
+    {
+        return config('api_model.cache_ttl', 3600); // Default: 1 hour
+    }
+
+    /**
      * Get all models from the API.
      *
      * @return \Illuminate\Support\Collection
@@ -85,24 +98,46 @@ trait ApiModelInterfaceMethods
     public static function allFromApi()
     {
         $instance = new static;
-        $apiClient = $instance->getApiClient();
+        $cacheKey = $instance->getApiCacheKey('all');
+        $cacheTtl = $instance->getCacheTtl();
+        
+        // Check if we have a cached response
+        if (config('api_model.cache_enabled', true) && $cacheTtl > 0) {
+            $cachedData = Cache::get($cacheKey);
+            if ($cachedData !== null) {
+                Log::info("Using cached data for all models", [
+                    'model' => get_class($instance)
+                ]);
+                return $instance->newCollectionFromApiResponse($cachedData);
+            }
+        }
         
         try {
+            // Fire before event
+            $instance->fireApiEvent('retrievingAll');
+            
             Log::info("Fetching all models from API", [
                 'model' => get_class($instance),
                 'endpoint' => $instance->getApiEndpoint()
             ]);
             
+            $apiClient = $instance->getApiClient();
             $response = $apiClient->get($instance->getApiEndpoint());
+            
+            // Fire after event
+            $instance->fireApiEvent('retrievedAll', $response);
             
             Log::info("Successfully fetched models from API", [
                 'model' => get_class($instance),
-                'count' => count($response)
+                'count' => is_array($response) ? count($response) : 0
             ]);
             
-            return collect($response)->map(function ($data) {
-                return new static($data);
-            });
+            // Cache the response if caching is enabled
+            if (config('api_model.cache_enabled', true) && $cacheTtl > 0) {
+                Cache::put($cacheKey, $response, $cacheTtl);
+            }
+            
+            return $instance->newCollectionFromApiResponse($response);
         } catch (\Exception $e) {
             Log::error("Failed to fetch models from API: " . $e->getMessage(), [
                 'model' => get_class($instance),
@@ -111,7 +146,8 @@ trait ApiModelInterfaceMethods
             ]);
             
             $instance->lastApiError = $e->getMessage();
-            throw $e;
+            $instance->fireApiEvent('retrieveAllFailed', $e);
+            return new Collection();
         }
     }
 
@@ -124,23 +160,48 @@ trait ApiModelInterfaceMethods
     public static function findFromApi($id)
     {
         $instance = new static;
-        $apiClient = $instance->getApiClient();
+        $cacheKey = $instance->getApiCacheKey('find', $id);
+        $cacheTtl = $instance->getCacheTtl();
+        
+        // Check if we have a cached response
+        if (config('api_model.cache_enabled', true) && $cacheTtl > 0) {
+            $cachedData = Cache::get($cacheKey);
+            if ($cachedData !== null) {
+                Log::info("Using cached data for model", [
+                    'model' => get_class($instance),
+                    'id' => $id
+                ]);
+                return $instance->newFromApiResponse($cachedData);
+            }
+        }
         
         try {
+            // Fire before event
+            $instance->fireApiEvent('finding', $id);
+            
             Log::info("Finding model from API", [
                 'model' => get_class($instance),
                 'id' => $id,
                 'endpoint' => $instance->getApiEndpoint() . '/' . $id
             ]);
             
+            $apiClient = $instance->getApiClient();
             $response = $apiClient->get($instance->getApiEndpoint() . '/' . $id);
+            
+            // Fire after event
+            $instance->fireApiEvent('found', $response);
             
             Log::info("Successfully found model from API", [
                 'model' => get_class($instance),
                 'id' => $id
             ]);
             
-            return new static($response);
+            // Cache the response if caching is enabled
+            if (config('api_model.cache_enabled', true) && $cacheTtl > 0) {
+                Cache::put($cacheKey, $response, $cacheTtl);
+            }
+            
+            return $instance->newFromApiResponse($response);
         } catch (\Exception $e) {
             Log::error("Failed to find model from API: " . $e->getMessage(), [
                 'model' => get_class($instance),
@@ -150,6 +211,7 @@ trait ApiModelInterfaceMethods
             ]);
             
             $instance->lastApiError = $e->getMessage();
+            $instance->fireApiEvent('findFailed', ['id' => $id, 'error' => $e]);
             return null;
         }
     }
@@ -170,9 +232,13 @@ trait ApiModelInterfaceMethods
         // If this is a create operation, use create-specific attributes
         if (!$this->exists) {
             $data = array_intersect_key($data, array_flip($this->getCreateApiAttributes()));
+            // Fire before event
+            $this->fireApiEvent('creating', $data);
         } else {
             // If this is an update operation, use update-specific attributes
             $data = array_intersect_key($data, array_flip($this->getUpdateApiAttributes()));
+            // Fire before event
+            $this->fireApiEvent('updating', $data);
         }
         
         while ($attempt < $retries) {
@@ -187,10 +253,14 @@ trait ApiModelInterfaceMethods
                 ]);
                 
                 if ($this->exists) {
-                    $apiClient->put($this->getApiEndpoint() . '/' . $this->getKey(), $data);
+                    $response = $apiClient->put($this->getApiEndpoint() . '/' . $this->getKey(), $data);
+                    // Fire after event
+                    $this->fireApiEvent('updated', $response);
                 } else {
                     $response = $apiClient->post($this->getApiEndpoint(), $data);
                     $this->forceFill($response);
+                    // Fire after event
+                    $this->fireApiEvent('created', $response);
                 }
                 
                 Log::info("Successfully saved model to API", [
@@ -198,6 +268,9 @@ trait ApiModelInterfaceMethods
                     'id' => $this->getKey(),
                     'operation' => $this->exists ? 'update' : 'create'
                 ]);
+                
+                // Clear cache for this model
+                $this->clearModelCache($this->getKey());
                 
                 $this->lastApiError = null;
                 return true;
@@ -219,6 +292,12 @@ trait ApiModelInterfaceMethods
                         'id' => $this->getKey(),
                         'operation' => $this->exists ? 'update' : 'create',
                         'last_error' => $this->lastApiError
+                    ]);
+                    
+                    // Fire failed event
+                    $this->fireApiEvent($this->exists ? 'updateFailed' : 'createFailed', [
+                        'error' => $e,
+                        'data' => $data
                     ]);
                     
                     return false;
@@ -248,6 +327,9 @@ trait ApiModelInterfaceMethods
         $apiClient = $this->getApiClient();
         $attempt = 0;
         
+        // Fire before event
+        $this->fireApiEvent('deleting', $this->getKey());
+        
         while ($attempt < $retries) {
             try {
                 Log::info("Attempting to delete model from API (Attempt " . ($attempt + 1) . ")", [
@@ -262,6 +344,12 @@ trait ApiModelInterfaceMethods
                     'model' => get_class($this),
                     'id' => $this->getKey()
                 ]);
+                
+                // Fire after event
+                $this->fireApiEvent('deleted', $this->getKey());
+                
+                // Clear cache for this model
+                $this->clearModelCache($this->getKey());
                 
                 $this->lastApiError = null;
                 return true;
@@ -281,6 +369,12 @@ trait ApiModelInterfaceMethods
                         'model' => get_class($this),
                         'id' => $this->getKey(),
                         'last_error' => $this->lastApiError
+                    ]);
+                    
+                    // Fire failed event
+                    $this->fireApiEvent('deleteFailed', [
+                        'id' => $this->getKey(),
+                        'error' => $e
                     ]);
                     
                     return false;
@@ -640,5 +734,134 @@ trait ApiModelInterfaceMethods
             
             throw $e;
         }
+    }
+
+    /**
+     * Create a new model instance from an API response.
+     *
+     * @param array $response
+     * @return static|null
+     */
+    protected function newFromApiResponse($response)
+    {
+        if (empty($response)) {
+            return null;
+        }
+        
+        $model = new static($response);
+        $model->exists = true;
+        
+        return $model;
+    }
+
+    /**
+     * Create a new collection of models from an API response.
+     *
+     * @param array $response
+     * @return \Illuminate\Support\Collection
+     */
+    protected function newCollectionFromApiResponse($response)
+    {
+        $items = $this->extractItemsFromResponse($response);
+        
+        return collect($items)->map(function ($item) {
+            return $this->newFromApiResponse($item);
+        });
+    }
+
+    /**
+     * Extract items from an API response, handling different response formats.
+     *
+     * @param array $response
+     * @return array
+     */
+    protected function extractItemsFromResponse($response)
+    {
+        // Handle common API response formats
+        if (isset($response['data']) && is_array($response['data'])) {
+            return $response['data'];
+        }
+        
+        if (isset($response['items']) && is_array($response['items'])) {
+            return $response['items'];
+        }
+        
+        if (isset($response['results']) && is_array($response['results'])) {
+            return $response['results'];
+        }
+        
+        // If no recognized format, assume the response is the items array directly
+        return is_array($response) ? $response : [];
+    }
+
+    /**
+     * Get a cache key for API operations.
+     *
+     * @param string $operation
+     * @param mixed $id
+     * @return string
+     */
+    protected function getApiCacheKey($operation, $id = null)
+    {
+        $class = get_class($this);
+        $endpoint = $this->getApiEndpoint();
+        
+        if ($id !== null) {
+            return "api_model:{$class}:{$endpoint}:{$operation}:{$id}";
+        }
+        
+        return "api_model:{$class}:{$endpoint}:{$operation}";
+    }
+
+    /**
+     * Clear the cache for a specific model.
+     *
+     * @param mixed $id
+     * @return void
+     */
+    public function clearModelCache($id)
+    {
+        if (config('api_model.cache_enabled', true)) {
+            Cache::forget($this->getApiCacheKey('find', $id));
+        }
+    }
+
+    /**
+     * Clear the cache for all models of this type.
+     *
+     * @return void
+     */
+    public function clearAllCache()
+    {
+        if (config('api_model.cache_enabled', true)) {
+            Cache::forget($this->getApiCacheKey('all'));
+        }
+    }
+
+    /**
+     * Fire an API event.
+     *
+     * @param string $event
+     * @param mixed $payload
+     * @return void
+     */
+    protected function fireApiEvent($event, $payload = null)
+    {
+        $eventName = 'api.' . $event . '.' . strtolower(class_basename($this));
+        event($eventName, [$this, $payload]);
+    }
+
+    /**
+     * Get the API client instance.
+     *
+     * @return \ApiModelRelations\Contracts\ApiClientInterface
+     */
+    protected function getApiClient()
+    {
+        // Use the ApiClientFactory to get the appropriate client based on configuration
+        $baseUrl = property_exists($this, 'apiBaseUrl') ? $this->apiBaseUrl : '';
+        $protocol = property_exists($this, 'apiProtocol') ? $this->apiProtocol : null;
+        
+        return ApiClientFactory::create($baseUrl, null, $protocol);
     }
 }
