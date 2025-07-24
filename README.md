@@ -7,6 +7,34 @@
 
 A powerful Laravel package that enables Eloquent-like models to interact seamlessly with external APIs instead of a local database, including relationships, caching, error handling, and more.
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Basic Usage](#basic-usage)
+  - [Creating an API Model](#creating-an-api-model)
+  - [Using API Models](#using-api-models)
+  - [API Model Lifecycle](#api-model-lifecycle)
+- [API Relationships](#api-relationships)
+  - [Available Relationships](#available-relationships)
+  - [Defining Relationships](#defining-relationships)
+  - [Working with Relationships](#working-with-relationships)
+- [Query Builder](#query-builder)
+- [Caching](#caching)
+- [Authentication](#authentication)
+- [Events](#events)
+- [Middleware Pipeline](#middleware-pipeline)
+- [Error Handling](#error-handling)
+- [Advanced Usage](#advanced-usage)
+  - [Local Database Integration](#local-database-integration)
+  - [Custom Response Transformers](#custom-response-transformers)
+  - [API Mocking](#api-mocking)
+  - [Performance Optimization](#performance-optimization)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Features
 
 - **Eloquent-like API Models**: Use familiar Laravel Eloquent syntax with external APIs
@@ -197,6 +225,32 @@ $product->update(['price' => 149.99]);
 $product->delete();
 ```
 
+### API Model Lifecycle
+
+Understanding the API model lifecycle helps you work with the package more effectively:
+
+```php
+// Creating a new model instance
+$product = new Product();
+$product->name = 'New Product';
+$product->price = 99.99;
+
+// Save to API - triggers API POST request
+$product->save();
+
+// At this point, the model has been saved to the API and has an ID
+
+// Refresh from API - triggers API GET request
+$product->refreshFromApi();
+
+// Update model - triggers API PUT/PATCH request
+$product->price = 149.99;
+$product->save();
+
+// Delete from API - triggers API DELETE request
+$product->delete();
+```
+
 ## API Relationships
 
 ### Available Relationships
@@ -271,6 +325,59 @@ public function commentable()
 }
 ```
 
+### Working with Relationships
+
+Here are examples of working with different relationship types:
+
+```php
+// One-to-many relationship
+$product = Product::find(1);
+$reviews = $product->reviews; // Get all reviews for this product
+
+// Create a new related model
+$newReview = $product->reviews()->create([
+    'rating' => 5,
+    'comment' => 'Great product!'
+]);
+
+// Many-to-one relationship
+$review = Review::find(1);
+$product = $review->product; // Get the product for this review
+
+// One-to-one relationship
+$product = Product::find(1);
+$image = $product->featuredImage; // Get the featured image
+
+// Update a related model
+$product->featuredImage->update([
+    'url' => 'https://example.com/new-image.jpg'
+]);
+
+// Many-to-many relationship
+$product = Product::find(1);
+$tags = $product->tags; // Get all tags for this product
+
+// Attach a tag to a product
+$product->tags()->attach(5);
+
+// Detach a tag from a product
+$product->tags()->detach(3);
+
+// Sync tags (remove existing and add new ones)
+$product->tags()->sync([1, 2, 5]);
+
+// One-to-many through relationship
+$user = User::find(1);
+$comments = $user->comments; // Get all comments on the user's posts
+
+// Polymorphic relationships
+$product = Product::find(1);
+$comments = $product->comments; // Get comments for this product
+
+$post = Post::find(1);
+$comments = $post->comments; // Get comments for this post
+```
+
 ## Query Builder
 
 Use the query builder to filter API results:
@@ -281,14 +388,44 @@ $products = Product::where('category_id', 1)
     ->where('price', '>', 50)
     ->get();
 
+// Where with array of conditions
+$products = Product::where([
+    ['status', '=', 'active'],
+    ['price', '>', 100]
+])->get();
+
+// Where with OR condition
+$products = Product::where('category_id', 1)
+    ->orWhere('featured', true)
+    ->get();
+
+// Where with nested conditions
+$products = Product::where('category_id', 1)
+    ->where(function($query) {
+        $query->where('price', '>', 100)
+              ->orWhere('featured', true);
+    })
+    ->get();
+
 // Order by
 $products = Product::orderBy('price', 'desc')->get();
+
+// Multiple order by
+$products = Product::orderBy('category_id')
+    ->orderBy('price', 'desc')
+    ->get();
 
 // Limit and offset
 $products = Product::limit(10)->offset(20)->get();
 
 // Pagination
 $products = Product::paginate(15);
+$products = Product::where('category_id', 1)->paginate(15);
+
+// Custom query parameters
+$products = Product::withQueryParam('include', 'category,tags')
+    ->withQueryParam('fields', 'id,name,price')
+    ->get();
 
 // Custom macros
 $products = Product::whereContains('name', 'phone')->get();
@@ -317,6 +454,18 @@ $product->refreshFromApi();
 
 // Clear cache for a model
 Product::clearCache();
+
+// Clear cache for a specific model instance
+$product = Product::find(1);
+$product->clearCache();
+
+// Clear cache for a specific query
+Product::where('category_id', 1)->clearCache();
+
+// Set custom cache key
+$products = Product::withCacheKey('featured_products')
+    ->where('featured', true)
+    ->get();
 ```
 
 ## Authentication
@@ -329,6 +478,10 @@ The package supports multiple authentication strategies:
 // In your .env file
 API_MODEL_RELATIONS_AUTH_STRATEGY=bearer
 API_MODEL_RELATIONS_AUTH_TOKEN=your-token-here
+
+// Or set dynamically in your code
+ApiClient::setAuthStrategy('bearer');
+ApiClient::setAuthToken('your-dynamic-token');
 ```
 
 ### Basic Auth
@@ -338,6 +491,10 @@ API_MODEL_RELATIONS_AUTH_TOKEN=your-token-here
 API_MODEL_RELATIONS_AUTH_STRATEGY=basic
 API_MODEL_RELATIONS_AUTH_USERNAME=your-username
 API_MODEL_RELATIONS_AUTH_PASSWORD=your-password
+
+// Or set dynamically in your code
+ApiClient::setAuthStrategy('basic');
+ApiClient::setBasicAuth('username', 'password');
 ```
 
 ### API Key
@@ -347,6 +504,35 @@ API_MODEL_RELATIONS_AUTH_PASSWORD=your-password
 API_MODEL_RELATIONS_AUTH_STRATEGY=api_key
 API_MODEL_RELATIONS_AUTH_API_KEY=your-api-key
 API_MODEL_RELATIONS_AUTH_HEADER_NAME=X-API-KEY
+
+// Or set dynamically in your code
+ApiClient::setAuthStrategy('api_key');
+ApiClient::setApiKey('your-api-key', 'X-API-KEY');
+```
+
+### Custom Authentication
+
+You can implement custom authentication strategies:
+
+```php
+use ApiModelRelations\Auth\AuthStrategyInterface;
+
+class CustomAuthStrategy implements AuthStrategyInterface
+{
+    public function apply($request)
+    {
+        // Apply your custom authentication to the request
+        return $request->withHeader('X-Custom-Auth', 'custom-value');
+    }
+}
+
+// Register your custom strategy
+app()->bind('api-model-relations.auth.custom', function() {
+    return new CustomAuthStrategy();
+});
+
+// Use your custom strategy
+ApiClient::setAuthStrategy('custom');
 ```
 
 ## Events
@@ -357,6 +543,9 @@ The package dispatches events during the API request lifecycle:
 use ApiModelRelations\Events\ApiRequestEvent;
 use ApiModelRelations\Events\ApiResponseEvent;
 use ApiModelRelations\Events\ApiExceptionEvent;
+use ApiModelRelations\Events\ModelCreatedEvent;
+use ApiModelRelations\Events\ModelUpdatedEvent;
+use ApiModelRelations\Events\ModelDeletedEvent;
 use Illuminate\Support\Facades\Event;
 
 // Listen for API request events
@@ -366,6 +555,7 @@ Event::listen(ApiRequestEvent::class, function (ApiRequestEvent $event) {
     $options = $event->options;
     
     // Do something before the API request
+    logger()->info("API Request: {$method} {$endpoint}");
 });
 
 // Listen for API response events
@@ -374,6 +564,7 @@ Event::listen(ApiResponseEvent::class, function (ApiResponseEvent $event) {
     $statusCode = $event->statusCode;
     
     // Do something with the API response
+    logger()->info("API Response: {$statusCode}");
 });
 
 // Listen for API exception events
@@ -381,6 +572,13 @@ Event::listen(ApiExceptionEvent::class, function (ApiExceptionEvent $event) {
     $exception = $event->exception;
     
     // Handle API exceptions
+    logger()->error("API Exception: {$exception->getMessage()}");
+});
+
+// Listen for model lifecycle events
+Event::listen(ModelCreatedEvent::class, function (ModelCreatedEvent $event) {
+    $model = $event->model;
+    logger()->info("Model created: " . get_class($model) . " #{$model->id}");
 });
 ```
 
@@ -398,67 +596,153 @@ class CustomMiddleware extends AbstractApiMiddleware
         $this->priority = 50; // Set middleware priority
     }
     
-    public function handle(array $request, callable $next): array
+    public function handle($request, \Closure $next)
     {
         // Modify the request
-        $request['options']['headers']['Custom-Header'] = 'Value';
+        $request = $request->withHeader('X-Custom-Header', 'custom-value');
         
         // Call the next middleware
         $response = $next($request);
         
         // Modify the response
-        $response['data']['custom_field'] = 'value';
-        
-        return $response;
+        return $response->withHeader('X-Response-Time', microtime(true) - LARAVEL_START);
     }
 }
 
-// Register the middleware in a service provider
-$this->app->make('api-pipeline')->pipe(new CustomMiddleware());
+// Register your middleware
+app()->bind('api-model-relations.middleware.custom', function() {
+    return new CustomMiddleware();
+});
+
+// Add your middleware to the pipeline
+config(['api-model-relations.middleware' => array_merge(
+    config('api-model-relations.middleware', []),
+    ['custom']
+)]);
 ```
 
-## Local Database Integration
+## Error Handling
 
-You can merge API data with local database records:
+The package provides comprehensive error handling for API requests:
 
 ```php
+// Try to find a model that doesn't exist
+try {
+    $product = Product::findOrFail(999);
+} catch (\ApiModelRelations\Exceptions\ModelNotFoundException $e) {
+    // Handle not found exception
+    logger()->error("Product not found: {$e->getMessage()}");
+}
+
+// Try to create a model with validation errors
+try {
+    $product = Product::create([
+        'name' => '',  // Required field
+        'price' => 'invalid'  // Should be a number
+    ]);
+} catch (\ApiModelRelations\Exceptions\ValidationException $e) {
+    // Get validation errors
+    $errors = $e->getErrors();
+    logger()->error("Validation errors: " . json_encode($errors));
+}
+
+// Handle API connection errors
+try {
+    $products = Product::all();
+} catch (\ApiModelRelations\Exceptions\ApiConnectionException $e) {
+    // Handle connection error
+    logger()->error("API connection error: {$e->getMessage()}");
+}
+
+// Get the last API response
+$lastResponse = ApiClient::getLastResponse();
+$statusCode = $lastResponse->getStatusCode();
+$body = $lastResponse->getBody()->getContents();
+
+// Get the last API request
+$lastRequest = ApiClient::getLastRequest();
+$method = $lastRequest->getMethod();
+$uri = $lastRequest->getUri();
+```
+
+## Advanced Usage
+
+### Local Database Integration
+
+You can integrate API models with local database records:
+
+```php
+use ApiModelRelations\Traits\SyncWithApi;
+use ApiModelRelations\Traits\MergesWithDatabase;
+use Illuminate\Database\Eloquent\Model;
+
+class Product extends Model
+{
+    use SyncWithApi, MergesWithDatabase;
+    
+    protected $apiEndpoint = 'products';
+    protected $table = 'products';
+    
+    // Specify which attributes should be stored only in the database
+    protected $dbOnly = ['local_stock', 'last_checked_at'];
+    
+    // Specify which attributes should be sent to the API
+    protected $apiOnly = ['name', 'description', 'price'];
+    
+    // Override the shouldMergeWithDatabase method to control when to merge
+    public function shouldMergeWithDatabase()
+    {
+        return true; // Always merge with database
+    }
+}
+
+// Usage
+$product = Product::find(1); // Gets from API and merges with local DB
+$product->local_stock = 10; // This will only be saved to the database
+$product->price = 149.99; // This will be saved to both API and database
+$product->save(); // Saves to both API and database in a transaction
+```
+
+### Custom Response Transformers
+
+You can transform API responses before they're converted to models:
+
+```php
+use ApiModelRelations\Transformers\AbstractResponseTransformer;
+
+class CustomProductTransformer extends AbstractResponseTransformer
+{
+    public function transform($response)
+    {
+        $data = json_decode($response->getBody()->getContents(), true);
+        
+        // Transform the data
+        if (isset($data['products'])) {
+            return $data['products'];
+        }
+        
+        return $data;
+    }
+}
+
+// Register your transformer
+app()->bind('api-model-relations.transformers.product', function() {
+    return new CustomProductTransformer();
+});
+
+// Use your transformer in your model
 class Product extends ApiModel
 {
     use SyncWithApi;
     
     protected $apiEndpoint = 'products';
-    protected $mergeLocalData = true; // Enable merging with local DB
-    protected $table = 'products'; // Local table name
+    protected $responseTransformer = 'product';
 }
 ```
 
-## Developer Tools
+### API Mocking
 
-### Generate Models from OpenAPI/Swagger
-
-```bash
-php artisan api-model:generate-from-swagger --url=https://example.com/api-docs.json --namespace=App\\Models\\Api
-```
-
-### Generate API Model Documentation
-
-```bash
-php artisan api-model:docs --directory=app/Models/Api --namespace=App\\Models\\Api
-```
-
-### Debug API Calls
-
-Enable debugging in your `.env` file:
-
-```
-API_MODEL_RELATIONS_DEBUG=true
-```
-
-Then visit `/api-model-relations/debug` in your browser to see the debug dashboard.
-
-## Testing
-
-The package includes tools for testing API models:
+For testing, you can mock API responses:
 
 ```php
 use ApiModelRelations\Testing\MocksApiResponses;
@@ -468,26 +752,114 @@ class ProductTest extends TestCase
 {
     use MocksApiResponses;
     
-    public function test_can_fetch_products()
+    public function testGetProducts()
     {
-        $this->mockApiResponse('products', 'GET', [
+        // Mock a response for GET /products
+        $this->mockApiResponse('GET', 'products', [
             'data' => [
-                ['id' => 1, 'name' => 'Product 1'],
-                ['id' => 2, 'name' => 'Product 2'],
+                ['id' => 1, 'name' => 'Product 1', 'price' => 99.99],
+                ['id' => 2, 'name' => 'Product 2', 'price' => 149.99],
             ]
         ]);
         
+        // Now when Product::all() is called, it will use the mocked response
         $products = Product::all();
         
         $this->assertCount(2, $products);
         $this->assertEquals('Product 1', $products[0]->name);
     }
+    
+    public function testCreateProduct()
+    {
+        // Mock a response for POST /products
+        $this->mockApiResponse('POST', 'products', [
+            'id' => 3,
+            'name' => 'New Product',
+            'price' => 199.99
+        ]);
+        
+        $product = Product::create([
+            'name' => 'New Product',
+            'price' => 199.99
+        ]);
+        
+        $this->assertEquals(3, $product->id);
+        $this->assertEquals('New Product', $product->name);
+    }
 }
+```
+
+### Performance Optimization
+
+Tips for optimizing performance:
+
+```php
+// Eager load relationships to reduce API calls
+$products = Product::with('category', 'reviews')->get();
+
+// Select only the fields you need
+$products = Product::select(['id', 'name', 'price'])->get();
+
+// Use pagination for large datasets
+$products = Product::paginate(20);
+
+// Use caching effectively
+$products = Product::withCacheTtl(3600)->get(); // Cache for 1 hour
+
+// Batch operations when possible
+$products = Product::whereIn('id', [1, 2, 3, 4, 5])->get();
+
+// Use custom endpoints for specific operations
+$featuredProducts = Product::withEndpoint('products/featured')->get();
+```
+
+## Troubleshooting
+
+Common issues and solutions:
+
+### API Connection Issues
+
+```php
+// Enable debug mode to see detailed request/response information
+config(['api-model-relations.debug' => true]);
+
+// Check the last request and response
+$lastRequest = ApiClient::getLastRequest();
+$lastResponse = ApiClient::getLastResponse();
+
+// Log all API requests and responses
+Event::listen(ApiRequestEvent::class, function ($event) {
+    logger()->debug('API Request', [
+        'method' => $event->method,
+        'endpoint' => $event->endpoint,
+        'options' => $event->options
+    ]);
+});
+
+Event::listen(ApiResponseEvent::class, function ($event) {
+    logger()->debug('API Response', [
+        'status' => $event->statusCode,
+        'body' => (string) $event->response->getBody()
+    ]);
+});
+```
+
+### Caching Issues
+
+```php
+// Clear all cache
+\Illuminate\Support\Facades\Cache::store(config('api-model-relations.cache.store'))->flush();
+
+// Disable caching temporarily
+config(['api-model-relations.cache.enabled' => false]);
+
+// Debug cache keys
+logger()->debug('Cache key: ' . Product::where('id', 1)->getCacheKey());
 ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
