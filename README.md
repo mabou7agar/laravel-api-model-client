@@ -3,7 +3,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/m-tech-stack/laravel-api-model-client.svg)](https://packagist.org/packages/m-tech-stack/laravel-api-model-client)
 [![Total Downloads](https://img.shields.io/packagist/dt/m-tech-stack/laravel-api-model-client.svg)](https://packagist.org/packages/m-tech-stack/laravel-api-model-client)
 [![License](https://img.shields.io/packagist/l/m-tech-stack/laravel-api-model-client.svg)](https://packagist.org/packages/m-tech-stack/laravel-api-model-client)
-[![Laravel Version](https://img.shields.io/badge/Laravel-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x-orange.svg)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/Laravel-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20%7C%2012.x-orange.svg)](https://laravel.com)
 
 A powerful Laravel package that enables Eloquent-like models to interact seamlessly with external APIs instead of a local database, including relationships, caching, error handling, and more.
 

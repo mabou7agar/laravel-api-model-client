@@ -144,7 +144,7 @@ trait ApiModelEvents
         
         // Laravel 8+ compatibility - use Event facade with proper error handling
         try {
-            $dispatcher = $this->getEventDispatcher();
+            $dispatcher = $this->getApiEventDispatcher();
             if ($dispatcher && method_exists($dispatcher, 'until')) {
                 return $dispatcher->until($eventName, [$this, $data]);
             }
@@ -231,7 +231,7 @@ trait ApiModelEvents
      *
      * @return \Illuminate\Events\Dispatcher|null
      */
-    protected function getEventDispatcher()
+    protected function getApiEventDispatcher()
     {
         try {
             return app('events');
@@ -247,6 +247,6 @@ trait ApiModelEvents
      */
     protected function supportsEvents()
     {
-        return $this->getEventDispatcher() !== null && $this->eventsEnabled;
+        return $this->getApiEventDispatcher() !== null && $this->eventsEnabled;
     }
 }
