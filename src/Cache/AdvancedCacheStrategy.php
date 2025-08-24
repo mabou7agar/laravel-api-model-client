@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Cache;
+namespace MTechStack\LaravelApiModelClient\Cache;
 
-use ApiModelRelations\Contracts\CacheStrategyInterface;
+use MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 

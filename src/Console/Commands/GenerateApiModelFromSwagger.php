@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Console\Commands;
+namespace MTechStack\LaravelApiModelClient\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -345,8 +345,8 @@ class GenerateApiModelFromSwagger extends Command
 
 namespace {$namespace};
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\SyncWithApi;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class {$modelName} extends ApiModel
 {

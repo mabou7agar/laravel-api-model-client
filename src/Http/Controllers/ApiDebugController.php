@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Http\Controllers;
+namespace MTechStack\LaravelApiModelClient\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;

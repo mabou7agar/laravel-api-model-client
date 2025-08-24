@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Tests;
+namespace MTechStack\LaravelApiModelClient\Tests;
 
-use ApiModelRelations\Jobs\SyncModelToApi;
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\ApiModelInterfaceMethods;
+use MTechStack\LaravelApiModelClient\Jobs\SyncModelToApi;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelInterfaceMethods;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;

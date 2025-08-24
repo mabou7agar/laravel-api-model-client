@@ -1,9 +1,9 @@
 <?php
 
-namespace ApiModelRelations\Examples;
+namespace MTechStack\LaravelApiModelClient\Examples;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\SyncWithApi;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class RemoteOrder extends ApiModel
 {

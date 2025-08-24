@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Testing;
+namespace MTechStack\LaravelApiModelClient\Testing;
 
-use ApiModelRelations\Contracts\ApiClientInterface;
-use ApiModelRelations\Contracts\AuthStrategyInterface;
-use ApiModelRelations\Exceptions\ApiException;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 
 class MockApiClient implements ApiClientInterface
 {

@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Services\Auth;
+namespace MTechStack\LaravelApiModelClient\Services\Auth;
 
-use ApiModelRelations\Contracts\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
 
 class BearerTokenAuth implements AuthStrategyInterface
 {

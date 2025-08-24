@@ -1,11 +1,11 @@
 <?php
 
-namespace ApiModelRelations\Middleware;
+namespace MTechStack\LaravelApiModelClient\Middleware;
 
-use ApiModelRelations\Events\ApiExceptionEvent;
-use ApiModelRelations\Events\ApiRequestEvent;
-use ApiModelRelations\Events\ApiResponseEvent;
-use ApiModelRelations\Exceptions\ApiException;
+use MTechStack\LaravelApiModelClient\Events\ApiExceptionEvent;
+use MTechStack\LaravelApiModelClient\Events\ApiRequestEvent;
+use MTechStack\LaravelApiModelClient\Events\ApiResponseEvent;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 
 class EventDispatcherMiddleware extends AbstractApiMiddleware
 {

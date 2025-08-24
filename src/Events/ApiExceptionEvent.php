@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Events;
+namespace MTechStack\LaravelApiModelClient\Events;
 
-use ApiModelRelations\Exceptions\ApiException;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 

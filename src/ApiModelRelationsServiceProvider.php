@@ -1,18 +1,18 @@
 <?php
 
-namespace ApiModelRelations;
+namespace MTechStack\LaravelApiModelClient;
 
-use ApiModelRelations\Console\Commands\GenerateApiModelDocumentation;
-use ApiModelRelations\Console\Commands\GenerateApiModelFromSwagger;
-use ApiModelRelations\Contracts\ApiClientInterface;
-use ApiModelRelations\Macros\ApiModelMacros;
-use ApiModelRelations\Services\ApiClient;
-use ApiModelRelations\Services\ApiPipeline;
-use ApiModelRelations\Services\Auth\ApiKeyAuth;
-use ApiModelRelations\Services\Auth\BasicAuth;
-use ApiModelRelations\Services\Auth\BearerTokenAuth;
-use ApiModelRelations\Middleware\LoggingMiddleware;
-use ApiModelRelations\Middleware\RateLimitMiddleware;
+use MTechStack\LaravelApiModelClient\Console\Commands\GenerateApiModelDocumentation;
+use MTechStack\LaravelApiModelClient\Console\Commands\GenerateApiModelFromSwagger;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Macros\ApiModelMacros;
+use MTechStack\LaravelApiModelClient\Services\ApiClient;
+use MTechStack\LaravelApiModelClient\Services\ApiPipeline;
+use MTechStack\LaravelApiModelClient\Services\Auth\ApiKeyAuth;
+use MTechStack\LaravelApiModelClient\Services\Auth\BasicAuth;
+use MTechStack\LaravelApiModelClient\Services\Auth\BearerTokenAuth;
+use MTechStack\LaravelApiModelClient\Middleware\LoggingMiddleware;
+use MTechStack\LaravelApiModelClient\Middleware\RateLimitMiddleware;
 use Illuminate\Support\ServiceProvider;
 
 class ApiModelRelationsServiceProvider extends ServiceProvider

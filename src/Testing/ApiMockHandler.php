@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Testing;
+namespace MTechStack\LaravelApiModelClient\Testing;
 
-use ApiModelRelations\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 

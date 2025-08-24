@@ -1,9 +1,9 @@
 <?php
 
-namespace ApiModelRelations\Relations;
+namespace MTechStack\LaravelApiModelClient\Relations;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\QueryBuilder\ApiQueryBuilder;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 

@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Query;
+namespace MTechStack\LaravelApiModelClient\Query;
 
-use ApiModelRelations\Contracts\ApiModelInterface;
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Query\ApiPaginator;
+use MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Query\ApiPaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;

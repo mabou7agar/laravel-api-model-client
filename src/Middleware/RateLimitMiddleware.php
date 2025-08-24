@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Middleware;
+namespace MTechStack\LaravelApiModelClient\Middleware;
 
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\App;

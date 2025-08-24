@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Factories;
+namespace MTechStack\LaravelApiModelClient\Factories;
 
-use ApiModelRelations\Clients\GrpcApiClient;
-use ApiModelRelations\Contracts\ApiClientInterface;
-use ApiModelRelations\Contracts\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Clients\GrpcApiClient;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Exceptions;
+namespace MTechStack\LaravelApiModelClient\Exceptions;
 
 use Exception;
 use Throwable;

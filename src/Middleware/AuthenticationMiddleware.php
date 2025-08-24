@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Middleware;
+namespace MTechStack\LaravelApiModelClient\Middleware;
 
-use ApiModelRelations\Contracts\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
 
 class AuthenticationMiddleware extends AbstractApiMiddleware
 {

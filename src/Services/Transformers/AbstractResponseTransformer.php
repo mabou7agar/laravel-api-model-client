@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Services\Transformers;
+namespace MTechStack\LaravelApiModelClient\Services\Transformers;
 
-use ApiModelRelations\Contracts\ResponseTransformerInterface;
+use MTechStack\LaravelApiModelClient\Contracts\ResponseTransformerInterface;
 
 abstract class AbstractResponseTransformer implements ResponseTransformerInterface
 {

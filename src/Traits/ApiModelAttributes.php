@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Traits;
+namespace MTechStack\LaravelApiModelClient\Traits;
 
 use Illuminate\Support\Arr;
 

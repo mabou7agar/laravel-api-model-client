@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Relations;
+namespace MTechStack\LaravelApiModelClient\Relations;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;

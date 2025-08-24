@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Middleware;
+namespace MTechStack\LaravelApiModelClient\Middleware;
 
-use ApiModelRelations\Contracts\ApiMiddlewareInterface;
+use MTechStack\LaravelApiModelClient\Contracts\ApiMiddlewareInterface;
 
 abstract class AbstractApiMiddleware implements ApiMiddlewareInterface
 {

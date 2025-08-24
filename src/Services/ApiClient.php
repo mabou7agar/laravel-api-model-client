@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Services;
+namespace MTechStack\LaravelApiModelClient\Services;
 
-use ApiModelRelations\Contracts\ApiClientInterface;
-use ApiModelRelations\Contracts\AuthStrategyInterface;
-use ApiModelRelations\Exceptions\ApiException;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;

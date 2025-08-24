@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Clients;
+namespace MTechStack\LaravelApiModelClient\Clients;
 
-use ApiModelRelations\Contracts\ApiClientInterface;
-use ApiModelRelations\Contracts\AuthStrategyInterface;
-use ApiModelRelations\Exceptions\ApiException;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 use Google\Protobuf\Internal\Message;
 use Illuminate\Support\Facades\Log;
 

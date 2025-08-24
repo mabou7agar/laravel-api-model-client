@@ -1,9 +1,9 @@
 <?php
 
-namespace ApiModelRelations\Traits;
+namespace MTechStack\LaravelApiModelClient\Traits;
 
-use ApiModelRelations\Cache\AdvancedCacheStrategy;
-use ApiModelRelations\Contracts\CacheStrategyInterface;
+use MTechStack\LaravelApiModelClient\Cache\AdvancedCacheStrategy;
+use MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface;
 use Illuminate\Support\Facades\Cache;
 
 /**

@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Services;
+namespace MTechStack\LaravelApiModelClient\Services;
 
-use ApiModelRelations\Contracts\ApiMiddlewareInterface;
+use MTechStack\LaravelApiModelClient\Contracts\ApiMiddlewareInterface;
 use Illuminate\Support\Collection;
 
 class ApiPipeline

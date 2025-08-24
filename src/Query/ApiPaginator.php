@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Query;
+namespace MTechStack\LaravelApiModelClient\Query;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;

@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Events;
+namespace MTechStack\LaravelApiModelClient\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;

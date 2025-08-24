@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Services\Transformers;
+namespace MTechStack\LaravelApiModelClient\Services\Transformers;
 
 class DataWrapperTransformer extends AbstractResponseTransformer
 {

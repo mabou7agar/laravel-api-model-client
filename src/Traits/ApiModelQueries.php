@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Traits;
+namespace MTechStack\LaravelApiModelClient\Traits;
 
-use ApiModelRelations\QueryBuilder\ApiQueryBuilder;
+use MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder;
 use Illuminate\Support\Collection;
 
 /**

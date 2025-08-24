@@ -1,9 +1,9 @@
 <?php
 
-namespace ApiModelRelations\Traits;
+namespace MTechStack\LaravelApiModelClient\Traits;
 
-use ApiModelRelations\Jobs\SyncModelToApi;
-use ApiModelRelations\Factories\ApiClientFactory;
+use MTechStack\LaravelApiModelClient\Jobs\SyncModelToApi;
+use MTechStack\LaravelApiModelClient\Factories\ApiClientFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

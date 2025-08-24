@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Repositories;
+namespace MTechStack\LaravelApiModelClient\Repositories;
 
-use ApiModelRelations\Contracts\ApiClientInterface;
-use ApiModelRelations\Contracts\ApiRepositoryInterface;
-use ApiModelRelations\Exceptions\ApiException;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Contracts\ApiRepositoryInterface;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;

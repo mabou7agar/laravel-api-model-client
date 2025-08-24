@@ -1,10 +1,10 @@
 <?php
 
-namespace ApiModelRelations\Traits;
+namespace MTechStack\LaravelApiModelClient\Traits;
 
-use ApiModelRelations\Relations\HasManyFromApi;
-use ApiModelRelations\Relations\BelongsToFromApi;
-use ApiModelRelations\Relations\HasManyThroughFromApi;
+use MTechStack\LaravelApiModelClient\Relations\HasManyFromApi;
+use MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi;
+use MTechStack\LaravelApiModelClient\Relations\HasManyThroughFromApi;
 use Illuminate\Support\Str;
 
 trait HasApiRelationships

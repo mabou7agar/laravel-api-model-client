@@ -1,5 +1,5 @@
 {
-    "name": "api-model-relations/laravel-api-model-relations",
+    "name": "m-tech-stack/laravel-api-model-client",
     "description": "A powerful Laravel package that enables Eloquent-like models to interact seamlessly with external APIs instead of a local database",
     "type": "library",
     "license": "MIT",
@@ -7,14 +7,17 @@
         "laravel",
         "api",
         "model",
+        "client",
         "relations",
         "eloquent",
-        "api-client"
+        "api-client",
+        "external-api",
+        "rest-api"
     ],
     "authors": [
         {
-            "name": "Laravel API Model Relations",
-            "email": "support@example.com"
+            "name": "M-Tech Stack",
+            "email": "m.abou7agar@gmail.com"
         }
     ],
     "require": {
@@ -31,18 +34,18 @@
     },
     "autoload": {
         "psr-4": {
-            "ApiModelRelations\\": "src/"
+            "MTechStack\\LaravelApiModelClient\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "ApiModelRelations\\Tests\\": "tests/"
+            "MTechStack\\LaravelApiModelClient\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "ApiModelRelations\\ApiModelRelationsServiceProvider"
+                "MTechStack\\LaravelApiModelClient\\ApiModelRelationsServiceProvider"
             ]
         }
     },

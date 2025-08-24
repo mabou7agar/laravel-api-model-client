@@ -1,9 +1,9 @@
 <?php
 
-namespace ApiModelRelations\Macros;
+namespace MTechStack\LaravelApiModelClient\Macros;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Query\ApiQueryBuilder;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 use Illuminate\Support\Facades\Config;
 
 class ApiModelMacros

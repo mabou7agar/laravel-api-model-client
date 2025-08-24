@@ -1,16 +1,16 @@
 <?php
 
-namespace ApiModelRelations\Models;
+namespace MTechStack\LaravelApiModelClient\Models;
 
-use ApiModelRelations\Contracts\ApiModelInterface;
-use ApiModelRelations\Traits\ApiModelAttributes;
-use ApiModelRelations\Traits\ApiModelCaching;
-use ApiModelRelations\Traits\ApiModelErrorHandling;
-use ApiModelRelations\Traits\ApiModelEvents;
-use ApiModelRelations\Traits\ApiModelInterfaceMethods;
-use ApiModelRelations\Traits\ApiModelQueries;
-use ApiModelRelations\Traits\HasApiRelationships;
-use ApiModelRelations\Traits\LazyLoadsApiRelationships;
+use MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelAttributes;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelCaching;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelErrorHandling;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelEvents;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelInterfaceMethods;
+use MTechStack\LaravelApiModelClient\Traits\ApiModelQueries;
+use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
+use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 

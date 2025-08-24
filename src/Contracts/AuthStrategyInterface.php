@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Contracts;
+namespace MTechStack\LaravelApiModelClient\Contracts;
 
 interface AuthStrategyInterface
 {

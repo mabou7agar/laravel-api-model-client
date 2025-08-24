@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Jobs;
+namespace MTechStack\LaravelApiModelClient\Jobs;
 
-use ApiModelRelations\Contracts\ApiModelInterface;
+use MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

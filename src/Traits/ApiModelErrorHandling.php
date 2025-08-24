@@ -1,8 +1,8 @@
 <?php
 
-namespace ApiModelRelations\Traits;
+namespace MTechStack\LaravelApiModelClient\Traits;
 
-use ApiModelRelations\Exceptions\ApiModelException;
+use MTechStack\LaravelApiModelClient\Exceptions\ApiModelException;
 use Illuminate\Support\Facades\Log;
 
 /**

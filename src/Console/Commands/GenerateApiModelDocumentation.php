@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Console\Commands;
+namespace MTechStack\LaravelApiModelClient\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;

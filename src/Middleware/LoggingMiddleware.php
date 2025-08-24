@@ -1,6 +1,6 @@
 <?php
 
-namespace ApiModelRelations\Middleware;
+namespace MTechStack\LaravelApiModelClient\Middleware;
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
