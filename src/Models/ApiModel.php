@@ -13,6 +13,7 @@ use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Str;
 
 class ApiModel extends Model implements ApiModelInterface
 {
@@ -59,7 +60,7 @@ class ApiModel extends Model implements ApiModelInterface
     protected function getDefaultTableName()
     {
         $className = class_basename($this);
-        return strtolower(str_plural($className));
+        return strtolower(Str::plural($className));
     }
 
     /**
