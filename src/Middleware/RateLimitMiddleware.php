@@ -52,7 +52,7 @@ class RateLimitMiddleware extends AbstractApiMiddleware
      * @param callable $next The next middleware in the pipeline
      * @return array The processed response
      *
-     * @throws \ApiModelRelations\Exceptions\ApiException
+     * @throws \MTechStack\LaravelApiModelClient\Exceptions\ApiException
      */
     public function handle(array $request, callable $next): array
     {
@@ -66,7 +66,7 @@ class RateLimitMiddleware extends AbstractApiMiddleware
         if ($this->limiter->tooManyAttempts($key, $this->maxAttempts)) {
             $retryAfter = $this->limiter->availableIn($key);
             
-            throw new \ApiModelRelations\Exceptions\ApiException(
+            throw new \MTechStack\LaravelApiModelClient\Exceptions\ApiException(
                 "Too many API requests. Please try again in {$retryAfter} seconds.",
                 429,
                 null,

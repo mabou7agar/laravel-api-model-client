@@ -13,7 +13,7 @@ trait ApiModelQueries
     /**
      * Create a new API query builder for the model.
      *
-     * @return \ApiModelRelations\QueryBuilder\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
      */
     public function newApiQuery()
     {
@@ -23,7 +23,7 @@ trait ApiModelQueries
     /**
      * Get a new query builder instance for the model.
      *
-     * @return \ApiModelRelations\QueryBuilder\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
      */
     public function newQuery()
     {

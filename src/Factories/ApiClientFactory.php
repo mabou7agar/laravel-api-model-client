@@ -14,9 +14,9 @@ class ApiClientFactory
      * Create an API client instance based on configuration.
      *
      * @param string $baseUrl
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface|null $authStrategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface|null $authStrategy
      * @param string|null $protocol Override the default protocol from config
-     * @return \ApiModelRelations\Contracts\ApiClientInterface
+     * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
     public static function create(
         string $baseUrl = '',

@@ -76,14 +76,14 @@ interface ApiRepositoryInterface
     /**
      * Get the API client instance.
      *
-     * @return \ApiModelRelations\Contracts\ApiClientInterface
+     * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
     public function getApiClient(): ApiClientInterface;
 
     /**
      * Set the API client instance.
      *
-     * @param \ApiModelRelations\Contracts\ApiClientInterface $client
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface $client
      * @return $this
      */
     public function setApiClient(ApiClientInterface $client);

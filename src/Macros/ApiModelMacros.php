@@ -89,7 +89,7 @@ class ApiModelMacros
          *
          * @param string $field
          * @param mixed $value
-         * @return \ApiModelRelations\Query\ApiQueryBuilder
+         * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
          */
         ApiQueryBuilder::macro('whereContains', function (string $field, $value) {
             return $this->where($field, 'contains', $value);
@@ -100,7 +100,7 @@ class ApiModelMacros
          *
          * @param string $field
          * @param mixed $value
-         * @return \ApiModelRelations\Query\ApiQueryBuilder
+         * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
          */
         ApiQueryBuilder::macro('whereStartsWith', function (string $field, $value) {
             return $this->where($field, 'startsWith', $value);
@@ -111,7 +111,7 @@ class ApiModelMacros
          *
          * @param string $field
          * @param mixed $value
-         * @return \ApiModelRelations\Query\ApiQueryBuilder
+         * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
          */
         ApiQueryBuilder::macro('whereEndsWith', function (string $field, $value) {
             return $this->where($field, 'endsWith', $value);
@@ -120,7 +120,7 @@ class ApiModelMacros
         /**
          * Skip caching for this query.
          *
-         * @return \ApiModelRelations\Query\ApiQueryBuilder
+         * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
          */
         ApiQueryBuilder::macro('withoutCache', function () {
             $this->useCache = false;
@@ -131,7 +131,7 @@ class ApiModelMacros
          * Set a specific cache TTL for this query.
          *
          * @param int $seconds
-         * @return \ApiModelRelations\Query\ApiQueryBuilder
+         * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
          */
         ApiQueryBuilder::macro('cacheFor', function (int $seconds) {
             $this->cacheTtl = $seconds;

@@ -318,7 +318,7 @@ class ApiModelSyncTest extends TestCase
 /**
  * Test model class for API sync tests.
  */
-class TestModel extends Model implements \ApiModelRelations\Contracts\ApiModelInterface
+class TestModel extends Model implements \MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface
 {
     use ApiModelInterfaceMethods;
     

@@ -57,10 +57,10 @@ interface ApiClientInterface
     /**
      * Set the authentication strategy.
      *
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface $authStrategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface $authStrategy
      * @return $this
      */
-    public function setAuthStrategy(\ApiModelRelations\Contracts\AuthStrategyInterface $authStrategy);
+    public function setAuthStrategy(\MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface $authStrategy);
 
     /**
      * Set the base URL for API requests.

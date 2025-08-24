@@ -81,7 +81,7 @@ class RemoteProduct extends ApiModel
     /**
      * Get the category that the product belongs to.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function category()
     {
@@ -91,7 +91,7 @@ class RemoteProduct extends ApiModel
     /**
      * Get the reviews for the product.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function reviews()
     {
@@ -111,8 +111,8 @@ class RemoteProduct extends ApiModel
     /**
      * Scope a query to only include active products.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeActive($query)
     {
@@ -122,8 +122,8 @@ class RemoteProduct extends ApiModel
     /**
      * Scope a query to only include products with stock.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeInStock($query)
     {

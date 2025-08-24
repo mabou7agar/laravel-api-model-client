@@ -65,7 +65,7 @@ composer require m-tech-stack/laravel-api-model-client
 After installing, publish the configuration file:
 
 ```bash
-php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\ApiModelRelationsServiceProvider" --tag="config"
+php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\MTechStack\LaravelApiModelClientServiceProvider" --tag="config"
 ```
 
 ## Configuration
@@ -136,8 +136,8 @@ Create a model that extends `ApiModel` and use the `SyncWithApi` trait:
 
 namespace App\Models\Api;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\SyncWithApi;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class Product extends ApiModel
 {
@@ -515,7 +515,7 @@ ApiClient::setApiKey('your-api-key', 'X-API-KEY');
 You can implement custom authentication strategies:
 
 ```php
-use ApiModelRelations\Auth\AuthStrategyInterface;
+use MTechStack\LaravelApiModelClient\Auth\AuthStrategyInterface;
 
 class CustomAuthStrategy implements AuthStrategyInterface
 {
@@ -540,12 +540,12 @@ ApiClient::setAuthStrategy('custom');
 The package dispatches events during the API request lifecycle:
 
 ```php
-use ApiModelRelations\Events\ApiRequestEvent;
-use ApiModelRelations\Events\ApiResponseEvent;
-use ApiModelRelations\Events\ApiExceptionEvent;
-use ApiModelRelations\Events\ModelCreatedEvent;
-use ApiModelRelations\Events\ModelUpdatedEvent;
-use ApiModelRelations\Events\ModelDeletedEvent;
+use MTechStack\LaravelApiModelClient\Events\ApiRequestEvent;
+use MTechStack\LaravelApiModelClient\Events\ApiResponseEvent;
+use MTechStack\LaravelApiModelClient\Events\ApiExceptionEvent;
+use MTechStack\LaravelApiModelClient\Events\ModelCreatedEvent;
+use MTechStack\LaravelApiModelClient\Events\ModelUpdatedEvent;
+use MTechStack\LaravelApiModelClient\Events\ModelDeletedEvent;
 use Illuminate\Support\Facades\Event;
 
 // Listen for API request events
@@ -587,7 +587,7 @@ Event::listen(ModelCreatedEvent::class, function (ModelCreatedEvent $event) {
 The package uses a middleware pipeline to process API requests. You can add custom middleware:
 
 ```php
-use ApiModelRelations\Middleware\AbstractApiMiddleware;
+use MTechStack\LaravelApiModelClient\Middleware\AbstractApiMiddleware;
 
 class CustomMiddleware extends AbstractApiMiddleware
 {
@@ -629,7 +629,7 @@ The package provides comprehensive error handling for API requests:
 // Try to find a model that doesn't exist
 try {
     $product = Product::findOrFail(999);
-} catch (\ApiModelRelations\Exceptions\ModelNotFoundException $e) {
+} catch (\MTechStack\LaravelApiModelClient\Exceptions\ModelNotFoundException $e) {
     // Handle not found exception
     logger()->error("Product not found: {$e->getMessage()}");
 }
@@ -640,7 +640,7 @@ try {
         'name' => '',  // Required field
         'price' => 'invalid'  // Should be a number
     ]);
-} catch (\ApiModelRelations\Exceptions\ValidationException $e) {
+} catch (\MTechStack\LaravelApiModelClient\Exceptions\ValidationException $e) {
     // Get validation errors
     $errors = $e->getErrors();
     logger()->error("Validation errors: " . json_encode($errors));
@@ -649,7 +649,7 @@ try {
 // Handle API connection errors
 try {
     $products = Product::all();
-} catch (\ApiModelRelations\Exceptions\ApiConnectionException $e) {
+} catch (\MTechStack\LaravelApiModelClient\Exceptions\ApiConnectionException $e) {
     // Handle connection error
     logger()->error("API connection error: {$e->getMessage()}");
 }
@@ -672,8 +672,8 @@ $uri = $lastRequest->getUri();
 You can integrate API models with local database records:
 
 ```php
-use ApiModelRelations\Traits\SyncWithApi;
-use ApiModelRelations\Traits\MergesWithDatabase;
+use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
+use MTechStack\LaravelApiModelClient\Traits\MergesWithDatabase;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
@@ -708,7 +708,7 @@ $product->save(); // Saves to both API and database in a transaction
 You can transform API responses before they're converted to models:
 
 ```php
-use ApiModelRelations\Transformers\AbstractResponseTransformer;
+use MTechStack\LaravelApiModelClient\Transformers\AbstractResponseTransformer;
 
 class CustomProductTransformer extends AbstractResponseTransformer
 {
@@ -745,7 +745,7 @@ class Product extends ApiModel
 For testing, you can mock API responses:
 
 ```php
-use ApiModelRelations\Testing\MocksApiResponses;
+use MTechStack\LaravelApiModelClient\Testing\MocksApiResponses;
 use Tests\TestCase;
 
 class ProductTest extends TestCase

@@ -43,7 +43,7 @@ composer require your-vendor/laravel-api-model-relations
 ### 3. Publish Configuration
 
 ```bash
-php artisan vendor:publish --provider="ApiModelRelations\ApiModelRelationsServiceProvider" --tag="config"
+php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\MTechStack\LaravelApiModelClientServiceProvider" --tag="config"
 ```
 
 ### 4. Generate gRPC Client Code
@@ -132,7 +132,7 @@ Configure your gRPC services in `config/api_model.php`:
 
 namespace App\Models;
 
-use ApiModelRelations\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
 
 class User extends ApiModel
 {

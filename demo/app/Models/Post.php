@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\HasApiRelationships;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 
 class Post extends ApiModel
 {
@@ -54,7 +54,7 @@ class Post extends ApiModel
     /**
      * Get the user that owns the post.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function user()
     {
@@ -64,7 +64,7 @@ class Post extends ApiModel
     /**
      * Get the comments for the post.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function comments()
     {

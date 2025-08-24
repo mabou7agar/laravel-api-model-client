@@ -34,7 +34,7 @@ class ApiExceptionEvent
     /**
      * The exception that occurred.
      *
-     * @var \ApiModelRelations\Exceptions\ApiException
+     * @var \MTechStack\LaravelApiModelClient\Exceptions\ApiException
      */
     public $exception;
 
@@ -51,7 +51,7 @@ class ApiExceptionEvent
      * @param string $method
      * @param string $endpoint
      * @param array $options
-     * @param \ApiModelRelations\Exceptions\ApiException $exception
+     * @param \MTechStack\LaravelApiModelClient\Exceptions\ApiException $exception
      * @param string|null $modelClass
      * @return void
      */

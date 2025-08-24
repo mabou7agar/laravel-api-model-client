@@ -33,7 +33,7 @@ class MorphManyFromApi extends ApiRelation
     /**
      * Create a new morph many relationship instance.
      *
-     * @param  \ApiModelRelations\Models\ApiModel  $parent
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $parent
      * @param  string  $type
      * @param  string  $id
      * @param  string  $localKey
@@ -71,8 +71,8 @@ class MorphManyFromApi extends ApiRelation
     /**
      * Add constraints to the query.
      *
-     * @param  \ApiModelRelations\QueryBuilder\ApiQueryBuilder  $query
-     * @return \ApiModelRelations\QueryBuilder\ApiQueryBuilder
+     * @param  \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder  $query
+     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
      */
     public function addConstraints(ApiQueryBuilder $query)
     {
@@ -177,7 +177,7 @@ class MorphManyFromApi extends ApiRelation
      * Create a new instance of the related model.
      *
      * @param  array  $attributes
-     * @return \ApiModelRelations\Models\ApiModel
+     * @return \MTechStack\LaravelApiModelClient\Models\ApiModel
      */
     public function create(array $attributes = [])
     {

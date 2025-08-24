@@ -66,7 +66,7 @@ class ApiModel extends Model implements ApiModelInterface
     /**
      * Get the API client instance.
      *
-     * @return \ApiModelRelations\Contracts\ApiClientInterface
+     * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
     protected function getApiClient()
     {

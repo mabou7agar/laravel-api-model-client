@@ -44,7 +44,7 @@ class ApiPaginator extends LengthAwarePaginator
     /**
      * Create a new API paginator instance from an API response.
      *
-     * @param \ApiModelRelations\Models\ApiModel $model
+     * @param \MTechStack\LaravelApiModelClient\Models\ApiModel $model
      * @param array $response
      * @param int $perPage
      * @param int|null $currentPage
@@ -119,7 +119,7 @@ class ApiPaginator extends LengthAwarePaginator
     /**
      * Create model instances from an API response.
      *
-     * @param \ApiModelRelations\Models\ApiModel $model
+     * @param \MTechStack\LaravelApiModelClient\Models\ApiModel $model
      * @param array $response
      * @return \Illuminate\Support\Collection
      */

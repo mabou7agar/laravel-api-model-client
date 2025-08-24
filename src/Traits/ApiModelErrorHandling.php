@@ -53,7 +53,7 @@ trait ApiModelErrorHandling
      * @param  int|null  $code
      * @return void
      *
-     * @throws \ApiModelRelations\Exceptions\ApiModelException
+     * @throws \MTechStack\LaravelApiModelClient\Exceptions\ApiModelException
      */
     protected function handleApiError($message, $response = null, $code = null)
     {

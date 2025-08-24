@@ -84,7 +84,7 @@ class RemoteOrder extends ApiModel
     /**
      * Get the user that placed the order.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function user()
     {
@@ -94,7 +94,7 @@ class RemoteOrder extends ApiModel
     /**
      * Get the order items.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function items()
     {
@@ -114,9 +114,9 @@ class RemoteOrder extends ApiModel
     /**
      * Scope a query to only include orders with a specific status.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
      * @param string $status
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeWithStatus($query, $status)
     {
@@ -126,8 +126,8 @@ class RemoteOrder extends ApiModel
     /**
      * Scope a query to only include completed orders.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeCompleted($query)
     {
@@ -137,8 +137,8 @@ class RemoteOrder extends ApiModel
     /**
      * Scope a query to only include pending orders.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopePending($query)
     {

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\HasApiRelationships;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 
 class User extends ApiModel
 {
@@ -55,7 +55,7 @@ class User extends ApiModel
     /**
      * Get the posts for the user.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function posts()
     {
@@ -65,7 +65,7 @@ class User extends ApiModel
     /**
      * Get the todos for the user.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function todos()
     {
@@ -75,7 +75,7 @@ class User extends ApiModel
     /**
      * Get the albums for the user.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function albums()
     {
@@ -85,7 +85,7 @@ class User extends ApiModel
     /**
      * Get the photos for the user through albums.
      *
-     * @return \ApiModelRelations\Relations\HasManyThroughFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyThroughFromApi
      */
     public function photos()
     {

@@ -75,7 +75,7 @@ class RemoteCategory extends ApiModel
     /**
      * Get the parent category.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function parent()
     {
@@ -85,7 +85,7 @@ class RemoteCategory extends ApiModel
     /**
      * Get the child categories.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function children()
     {
@@ -95,7 +95,7 @@ class RemoteCategory extends ApiModel
     /**
      * Get the products in this category.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function products()
     {
@@ -105,8 +105,8 @@ class RemoteCategory extends ApiModel
     /**
      * Scope a query to only include active categories.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeActive($query)
     {
@@ -116,8 +116,8 @@ class RemoteCategory extends ApiModel
     /**
      * Scope a query to only include root categories.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeRoot($query)
     {

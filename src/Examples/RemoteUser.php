@@ -85,7 +85,7 @@ class RemoteUser extends ApiModel
     /**
      * Get the reviews written by the user.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function reviews()
     {
@@ -95,7 +95,7 @@ class RemoteUser extends ApiModel
     /**
      * Get the orders placed by the user.
      *
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function orders()
     {
@@ -105,8 +105,8 @@ class RemoteUser extends ApiModel
     /**
      * Scope a query to only include active users.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeActive($query)
     {
@@ -116,8 +116,8 @@ class RemoteUser extends ApiModel
     /**
      * Scope a query to only include verified users.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeVerified($query)
     {

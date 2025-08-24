@@ -20,7 +20,7 @@ class GrpcApiClient implements ApiClientInterface
     /**
      * Authentication strategy.
      *
-     * @var \ApiModelRelations\Contracts\AuthStrategyInterface|null
+     * @var \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface|null
      */
     protected $authStrategy;
 
@@ -42,7 +42,7 @@ class GrpcApiClient implements ApiClientInterface
      * Create a new gRPC API client instance.
      *
      * @param string $baseUrl
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface|null $authStrategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface|null $authStrategy
      */
     public function __construct(string $baseUrl = '', ?AuthStrategyInterface $authStrategy = null)
     {
@@ -463,7 +463,7 @@ class GrpcApiClient implements ApiClientInterface
     /**
      * Set the authentication strategy.
      *
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface $authStrategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface $authStrategy
      * @return $this
      */
     public function setAuthStrategy(AuthStrategyInterface $authStrategy)

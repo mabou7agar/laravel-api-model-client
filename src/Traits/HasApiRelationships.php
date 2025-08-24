@@ -16,7 +16,7 @@ trait HasApiRelationships
      * @param string|null $endpoint API endpoint for the relationship (null to use default)
      * @param string|null $foreignKey Foreign key on the related model
      * @param string|null $localKey Local key on this model
-     * @return \ApiModelRelations\Relations\HasManyFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi
      */
     public function hasManyFromApi($related, $endpoint = null, $foreignKey = null, $localKey = null)
     {
@@ -43,7 +43,7 @@ trait HasApiRelationships
      * @param string|null $endpoint API endpoint for the relationship (null to use default)
      * @param string|null $foreignKey Foreign key on this model
      * @param string|null $ownerKey Key on the related model
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function belongsToFromApi($related, $endpoint = null, $foreignKey = null, $ownerKey = null)
     {
@@ -73,7 +73,7 @@ trait HasApiRelationships
      * @param string|null $firstKey Foreign key on the intermediate model
      * @param string|null $secondKey Foreign key on the related model
      * @param string|null $localKey Local key on this model
-     * @return \ApiModelRelations\Relations\HasManyThroughFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasManyThroughFromApi
      */
     public function hasManyThroughFromApi($related, $through, $firstKey = null, $secondKey = null, $localKey = null)
     {

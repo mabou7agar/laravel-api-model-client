@@ -9,7 +9,7 @@ abstract class AbstractResponseTransformer implements ResponseTransformerInterfa
     /**
      * The next transformer in the chain.
      *
-     * @var \ApiModelRelations\Contracts\ResponseTransformerInterface|null
+     * @var \MTechStack\LaravelApiModelClient\Contracts\ResponseTransformerInterface|null
      */
     protected $next;
 
@@ -35,7 +35,7 @@ abstract class AbstractResponseTransformer implements ResponseTransformerInterfa
     /**
      * Set the next transformer in the chain.
      *
-     * @param \ApiModelRelations\Contracts\ResponseTransformerInterface $transformer
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ResponseTransformerInterface $transformer
      * @return $this
      */
     public function setNext(ResponseTransformerInterface $transformer)

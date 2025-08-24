@@ -78,7 +78,7 @@ class RemoteReview extends ApiModel
     /**
      * Get the product that the review belongs to.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function product()
     {
@@ -88,7 +88,7 @@ class RemoteReview extends ApiModel
     /**
      * Get the user that wrote the review.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function user()
     {
@@ -98,8 +98,8 @@ class RemoteReview extends ApiModel
     /**
      * Scope a query to only include approved reviews.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeApproved($query)
     {
@@ -109,9 +109,9 @@ class RemoteReview extends ApiModel
     /**
      * Scope a query to only include reviews with a minimum rating.
      *
-     * @param \ApiModelRelations\Query\ApiQueryBuilder $query
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder $query
      * @param int $rating
-     * @return \ApiModelRelations\Query\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function scopeMinRating($query, $rating)
     {

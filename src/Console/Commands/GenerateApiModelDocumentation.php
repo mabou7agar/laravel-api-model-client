@@ -163,7 +163,7 @@ class GenerateApiModelDocumentation extends Command
     {
         $className = $reflection->getShortName();
         $namespace = $reflection->getNamespaceName();
-        $isApiModel = $reflection->isSubclassOf('ApiModelRelations\\Models\\ApiModel');
+        $isApiModel = $reflection->isSubclassOf('MTechStack\\LaravelApiModelClient\\Models\\ApiModel');
         
         $doc = "# {$className}\n\n";
         $doc .= "**Namespace:** `{$namespace}`\n\n";
@@ -289,7 +289,7 @@ class GenerateApiModelDocumentation extends Command
     {
         $className = $reflection->getShortName();
         $namespace = $reflection->getNamespaceName();
-        $isApiModel = $reflection->isSubclassOf('ApiModelRelations\\Models\\ApiModel');
+        $isApiModel = $reflection->isSubclassOf('MTechStack\\LaravelApiModelClient\\Models\\ApiModel');
         
         $html = "<!DOCTYPE html>\n";
         $html .= "<html lang=\"en\">\n";

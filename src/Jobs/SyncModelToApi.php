@@ -31,7 +31,7 @@ class SyncModelToApi implements ShouldQueue
     /**
      * The model instance to sync.
      *
-     * @var \ApiModelRelations\Contracts\ApiModelInterface
+     * @var \MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface
      */
     protected $model;
 
@@ -45,7 +45,7 @@ class SyncModelToApi implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param \ApiModelRelations\Contracts\ApiModelInterface $model
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface $model
      * @param string $operation
      * @return void
      */

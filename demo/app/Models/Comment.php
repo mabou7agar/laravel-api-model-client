@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\HasApiRelationships;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 
 class Comment extends ApiModel
 {
@@ -55,7 +55,7 @@ class Comment extends ApiModel
     /**
      * Get the post that owns the comment.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function post()
     {

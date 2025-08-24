@@ -100,7 +100,7 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
      * Resolve the authentication strategy from configuration.
      *
      * @param array $authConfig
-     * @return \ApiModelRelations\Contracts\AuthStrategyInterface|null
+     * @return \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface|null
      */
     protected function resolveAuthStrategy(array $authConfig)
     {

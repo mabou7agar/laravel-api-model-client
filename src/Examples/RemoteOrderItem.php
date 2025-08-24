@@ -83,7 +83,7 @@ class RemoteOrderItem extends ApiModel
     /**
      * Get the order that the item belongs to.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function order()
     {
@@ -93,7 +93,7 @@ class RemoteOrderItem extends ApiModel
     /**
      * Get the product for this order item.
      *
-     * @return \ApiModelRelations\Relations\BelongsToFromApi
+     * @return \MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi
      */
     public function product()
     {

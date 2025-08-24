@@ -11,14 +11,14 @@ class CacheInvalidationService
     /**
      * The cache strategy instance.
      *
-     * @var \ApiModelRelations\Contracts\CacheStrategyInterface
+     * @var \MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface
      */
     protected $cacheStrategy;
 
     /**
      * Create a new cache invalidation service instance.
      *
-     * @param  \ApiModelRelations\Contracts\CacheStrategyInterface  $cacheStrategy
+     * @param  \MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface  $cacheStrategy
      * @return void
      */
     public function __construct($cacheStrategy = null)
@@ -29,7 +29,7 @@ class CacheInvalidationService
     /**
      * Invalidate cache for a model.
      *
-     * @param  \ApiModelRelations\Models\ApiModel  $model
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $model
      * @return void
      */
     public function invalidateModel(ApiModel $model)
@@ -52,7 +52,7 @@ class CacheInvalidationService
     /**
      * Invalidate cache for related models.
      *
-     * @param  \ApiModelRelations\Models\ApiModel  $model
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $model
      * @return void
      */
     protected function invalidateRelatedModels(ApiModel $model)
@@ -126,7 +126,7 @@ class CacheInvalidationService
     /**
      * Get the tag for a model.
      *
-     * @param  \ApiModelRelations\Models\ApiModel  $model
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $model
      * @return string
      */
     protected function getModelTag(ApiModel $model)
@@ -162,7 +162,7 @@ class CacheInvalidationService
     /**
      * Get all relationship methods for a model.
      *
-     * @param  \ApiModelRelations\Models\ApiModel  $model
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $model
      * @return array
      */
     protected function getRelationshipMethods(ApiModel $model)
@@ -180,7 +180,7 @@ class CacheInvalidationService
             $returnType = $method->getReturnType();
             if ($returnType) {
                 $typeName = $returnType->getName();
-                if (strpos($typeName, 'ApiModelRelations\\Relations\\') === 0) {
+                if (strpos($typeName, 'MTechStack\\LaravelApiModelClient\\Relations\\') === 0) {
                     return true;
                 }
             }

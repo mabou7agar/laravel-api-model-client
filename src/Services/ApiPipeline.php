@@ -27,7 +27,7 @@ class ApiPipeline
     /**
      * Add middleware to the pipeline.
      *
-     * @param \ApiModelRelations\Contracts\ApiMiddlewareInterface $middleware
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ApiMiddlewareInterface $middleware
      * @return $this
      */
     public function pipe(ApiMiddlewareInterface $middleware)

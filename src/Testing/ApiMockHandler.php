@@ -25,7 +25,7 @@ class ApiMockHandler
     /**
      * The original API client instance.
      *
-     * @var \ApiModelRelations\Contracts\ApiClientInterface|null
+     * @var \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface|null
      */
     protected $originalClient;
 

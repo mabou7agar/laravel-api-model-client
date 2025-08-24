@@ -15,7 +15,7 @@ abstract class AbstractApiRepository implements ApiRepositoryInterface
     /**
      * The API client instance.
      *
-     * @var \ApiModelRelations\Contracts\ApiClientInterface
+     * @var \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
     protected $apiClient;
 
@@ -44,7 +44,7 @@ abstract class AbstractApiRepository implements ApiRepositoryInterface
      * Create a new API repository instance.
      *
      * @param string|null $endpoint
-     * @param \ApiModelRelations\Contracts\ApiClientInterface|null $apiClient
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface|null $apiClient
      * @return void
      */
     public function __construct(?string $endpoint = null, ?ApiClientInterface $apiClient = null)
@@ -282,7 +282,7 @@ abstract class AbstractApiRepository implements ApiRepositoryInterface
     /**
      * Get the API client instance.
      *
-     * @return \ApiModelRelations\Contracts\ApiClientInterface
+     * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
     public function getApiClient(): ApiClientInterface
     {
@@ -292,7 +292,7 @@ abstract class AbstractApiRepository implements ApiRepositoryInterface
     /**
      * Set the API client instance.
      *
-     * @param \ApiModelRelations\Contracts\ApiClientInterface $client
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface $client
      * @return $this
      */
     public function setApiClient(ApiClientInterface $client)

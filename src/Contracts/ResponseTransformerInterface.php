@@ -22,7 +22,7 @@ interface ResponseTransformerInterface
     /**
      * Set the next transformer in the chain.
      *
-     * @param \ApiModelRelations\Contracts\ResponseTransformerInterface $transformer
+     * @param \MTechStack\LaravelApiModelClient\Contracts\ResponseTransformerInterface $transformer
      * @return $this
      */
     public function setNext(ResponseTransformerInterface $transformer);

@@ -55,7 +55,7 @@ test_laravel_version() {
     
     # Publish the package configuration
     echo "Publishing package configuration..."
-    php artisan vendor:publish --provider="ApiModelRelations\ApiModelRelationsServiceProvider" || {
+    php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\ApiModelRelationsServiceProvider" || {
         print_error "Failed to publish package configuration"
         cd ..
         return 1
@@ -69,8 +69,8 @@ test_laravel_version() {
 
 namespace App\Models\Api;
 
-use ApiModelRelations\Models\ApiModel;
-use ApiModelRelations\Traits\SyncWithApi;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class TestApiModel extends ApiModel
 {

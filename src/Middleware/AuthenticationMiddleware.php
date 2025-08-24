@@ -9,14 +9,14 @@ class AuthenticationMiddleware extends AbstractApiMiddleware
     /**
      * The authentication strategy.
      *
-     * @var \ApiModelRelations\Contracts\AuthStrategyInterface
+     * @var \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface
      */
     protected $authStrategy;
 
     /**
      * Create a new authentication middleware instance.
      *
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface $authStrategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface $authStrategy
      * @return void
      */
     public function __construct(AuthStrategyInterface $authStrategy)

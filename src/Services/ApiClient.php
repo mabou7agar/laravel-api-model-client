@@ -28,7 +28,7 @@ class ApiClient implements ApiClientInterface
     /**
      * The authentication strategy.
      *
-     * @var \ApiModelRelations\Contracts\AuthStrategyInterface|null
+     * @var \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface|null
      */
     protected $authStrategy;
 
@@ -137,7 +137,7 @@ class ApiClient implements ApiClientInterface
     /**
      * Set the authentication strategy.
      *
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface $authStrategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface $authStrategy
      * @return $this
      */
     public function setAuthStrategy(AuthStrategyInterface $authStrategy)
@@ -165,7 +165,7 @@ class ApiClient implements ApiClientInterface
      * @param string $endpoint
      * @param array $options
      * @return mixed
-     * @throws \ApiModelRelations\Exceptions\ApiException
+     * @throws \MTechStack\LaravelApiModelClient\Exceptions\ApiException
      */
     protected function request(string $method, string $endpoint, array $options = [])
     {
@@ -235,7 +235,7 @@ class ApiClient implements ApiClientInterface
      * @param string $method
      * @param string $url
      * @return mixed
-     * @throws \ApiModelRelations\Exceptions\ApiException
+     * @throws \MTechStack\LaravelApiModelClient\Exceptions\ApiException
      */
     protected function handleRequestException(RequestException $exception, string $method, string $url)
     {

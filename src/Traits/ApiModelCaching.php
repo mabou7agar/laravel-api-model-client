@@ -35,7 +35,7 @@ trait ApiModelCaching
     /**
      * The cache strategy instance.
      *
-     * @var \ApiModelRelations\Contracts\CacheStrategyInterface|null
+     * @var \MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface|null
      */
     protected $cacheStrategy;
 
@@ -118,7 +118,7 @@ trait ApiModelCaching
     /**
      * Get the cache strategy instance.
      *
-     * @return \ApiModelRelations\Contracts\CacheStrategyInterface
+     * @return \MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface
      */
     public function getCacheStrategy()
     {
@@ -146,7 +146,7 @@ trait ApiModelCaching
     /**
      * Set the cache strategy instance.
      *
-     * @param  \ApiModelRelations\Contracts\CacheStrategyInterface  $strategy
+     * @param  \MTechStack\LaravelApiModelClient\Contracts\CacheStrategyInterface  $strategy
      * @return $this
      */
     public function setCacheStrategy(CacheStrategyInterface $strategy)

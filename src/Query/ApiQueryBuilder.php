@@ -16,7 +16,7 @@ class ApiQueryBuilder
     /**
      * The API model instance.
      *
-     * @var \ApiModelRelations\Models\ApiModel
+     * @var \MTechStack\LaravelApiModelClient\Models\ApiModel
      */
     protected $model;
 
@@ -58,7 +58,7 @@ class ApiQueryBuilder
     /**
      * Create a new API query builder instance.
      *
-     * @param \ApiModelRelations\Models\ApiModel $model
+     * @param \MTechStack\LaravelApiModelClient\Models\ApiModel $model
      * @return void
      */
     public function __construct(ApiModel $model)
@@ -231,7 +231,7 @@ class ApiQueryBuilder
     /**
      * Execute the query and get the first result.
      *
-     * @return \ApiModelRelations\Models\ApiModel|null
+     * @return \MTechStack\LaravelApiModelClient\Models\ApiModel|null
      */
     public function first()
     {
@@ -434,7 +434,7 @@ class ApiQueryBuilder
     /**
      * Get the API client instance.
      *
-     * @return \ApiModelRelations\Contracts\ApiClientInterface
+     * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
     protected function getApiClient()
     {
@@ -454,7 +454,7 @@ class ApiQueryBuilder
     /**
      * Get the model instance being queried.
      *
-     * @return \ApiModelRelations\Models\ApiModel
+     * @return \MTechStack\LaravelApiModelClient\Models\ApiModel
      */
     public function getModel()
     {
@@ -468,7 +468,7 @@ class ApiQueryBuilder
      * @param array $columns
      * @param string $pageName
      * @param int|null $page
-     * @return \ApiModelRelations\Query\ApiPaginator
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiPaginator
      */
     public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null)
     {
@@ -555,7 +555,7 @@ class ApiQueryBuilder
      * @param array $columns
      * @param string $pageName
      * @param int|null $page
-     * @return \ApiModelRelations\Query\ApiPaginator
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiPaginator
      */
     public function simplePaginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null)
     {

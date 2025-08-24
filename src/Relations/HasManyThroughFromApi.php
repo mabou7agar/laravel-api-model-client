@@ -12,14 +12,14 @@ class HasManyThroughFromApi extends ApiRelation
     /**
      * The "through" parent model instance.
      *
-     * @var \ApiModelRelations\Models\ApiModel
+     * @var \MTechStack\LaravelApiModelClient\Models\ApiModel
      */
     protected $throughParent;
 
     /**
      * The far parent model instance.
      *
-     * @var \ApiModelRelations\Models\ApiModel
+     * @var \MTechStack\LaravelApiModelClient\Models\ApiModel
      */
     protected $farParent;
 
@@ -40,8 +40,8 @@ class HasManyThroughFromApi extends ApiRelation
     /**
      * Create a new has many through relationship instance.
      *
-     * @param  \ApiModelRelations\Models\ApiModel  $farParent
-     * @param  \ApiModelRelations\Models\ApiModel  $throughParent
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $farParent
+     * @param  \MTechStack\LaravelApiModelClient\Models\ApiModel  $throughParent
      * @param  string  $throughKey
      * @param  string  $farKey
      * @param  string  $localKey
@@ -92,8 +92,8 @@ class HasManyThroughFromApi extends ApiRelation
     /**
      * Add constraints to the query.
      *
-     * @param  \ApiModelRelations\QueryBuilder\ApiQueryBuilder  $query
-     * @return \ApiModelRelations\QueryBuilder\ApiQueryBuilder
+     * @param  \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder  $query
+     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
      */
     public function addConstraints(ApiQueryBuilder $query)
     {

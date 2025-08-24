@@ -11,7 +11,7 @@ class MockApiClient implements ApiClientInterface
     /**
      * The API mock handler instance.
      *
-     * @var \ApiModelRelations\Testing\ApiMockHandler
+     * @var \MTechStack\LaravelApiModelClient\Testing\ApiMockHandler
      */
     protected $mockHandler;
 
@@ -25,14 +25,14 @@ class MockApiClient implements ApiClientInterface
     /**
      * The authentication strategy.
      *
-     * @var \ApiModelRelations\Contracts\AuthStrategyInterface|null
+     * @var \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface|null
      */
     protected $authStrategy;
 
     /**
      * Create a new mock API client instance.
      *
-     * @param \ApiModelRelations\Testing\ApiMockHandler $mockHandler
+     * @param \MTechStack\LaravelApiModelClient\Testing\ApiMockHandler $mockHandler
      * @param string|null $baseUrl
      * @return void
      */
@@ -58,7 +58,7 @@ class MockApiClient implements ApiClientInterface
     /**
      * Set the authentication strategy.
      *
-     * @param \ApiModelRelations\Contracts\AuthStrategyInterface $strategy
+     * @param \MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface $strategy
      * @return $this
      */
     public function setAuthStrategy(AuthStrategyInterface $strategy)
@@ -156,7 +156,7 @@ class MockApiClient implements ApiClientInterface
      * @param array $options
      * @return array
      *
-     * @throws \ApiModelRelations\Exceptions\ApiException
+     * @throws \MTechStack\LaravelApiModelClient\Exceptions\ApiException
      */
     protected function request(string $method, string $endpoint, array $options = []): array
     {
