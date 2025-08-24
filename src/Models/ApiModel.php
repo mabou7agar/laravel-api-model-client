@@ -333,4 +333,48 @@ class ApiModel extends Model implements ApiModelInterface
         
         return $model;
     }
+
+    /**
+     * Override Laravel's all() method to use API instead of database.
+     * This provides a seamless experience for users expecting standard Eloquent behavior.
+     *
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function all($columns = ['*'])
+    {
+        // Redirect to allFromApi() method to use API instead of database
+        return static::allFromApi();
+    }
+
+    /**
+     * Override initializeTraits to handle missing trait initializers gracefully.
+     * This prevents the "Undefined array key" and "foreach() argument must be of type array|object" warnings.
+     */
+    protected function initializeTraits()
+    {
+        // Check if trait initializers exist for this class before trying to iterate
+        if (isset(static::$traitInitializers[static::class]) && 
+            is_array(static::$traitInitializers[static::class])) {
+            foreach (static::$traitInitializers[static::class] as $method) {
+                if (method_exists($this, $method)) {
+                    $this->{$method}();
+                }
+            }
+        }
+    }
+
+    /**
+     * Override boot method to ensure proper trait initialization for API models.
+     */
+    protected static function boot()
+    {
+        // Initialize trait initializers array if not set
+        if (!isset(static::$traitInitializers[static::class])) {
+            static::$traitInitializers[static::class] = [];
+        }
+        
+        // Call parent boot to handle standard Laravel model initialization
+        parent::boot();
+    }
 }
