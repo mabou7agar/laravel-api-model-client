@@ -56,7 +56,7 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
         // Register API client
         $this->app->singleton('api-client', function ($app) {
             $config = $app['config']['api-model-client'];
-            $client = new ApiClient($config['client']['base_url'] ?? null);
+            $client = new ApiClient($config);
             
             // Set up authentication if configured
             if (isset($config['auth']['strategy'])) {

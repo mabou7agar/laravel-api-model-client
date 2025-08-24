@@ -90,6 +90,42 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | HTTP Client Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings for the HTTP client used for API requests.
+    |
+    */
+    'client' => [
+        'base_url' => env('API_MODEL_BASE_URL', ''),
+        'timeout' => env('API_MODEL_TIMEOUT', 30),
+        'connect_timeout' => env('API_MODEL_CONNECT_TIMEOUT', 10),
+        'verify' => env('API_MODEL_VERIFY_SSL', true),
+        'headers' => [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings for API authentication strategies.
+    |
+    */
+    'auth' => [
+        'strategy' => env('API_MODEL_AUTH_STRATEGY', null), // 'bearer', 'basic', 'api_key'
+        'token' => env('API_MODEL_AUTH_TOKEN', ''),
+        'username' => env('API_MODEL_AUTH_USERNAME', ''),
+        'password' => env('API_MODEL_AUTH_PASSWORD', ''),
+        'api_key' => env('API_MODEL_API_KEY', ''),
+        'api_key_header' => env('API_MODEL_API_KEY_HEADER', 'X-API-Key'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | gRPC Configuration
     |--------------------------------------------------------------------------
     |
