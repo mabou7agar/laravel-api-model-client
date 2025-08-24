@@ -81,13 +81,22 @@ trait ApiModelEvents
 
     /**
      * Register a model event.
+     * Compatible with Laravel's Eloquent Model signature.
      *
      * @param  string  $event
+     * @param  \Closure|string|null  $callback
      * @return void
      */
-    protected static function registerModelEvent($event)
+    protected static function registerModelEvent($event, $callback = null)
     {
-        static::registerModelObserver($event);
+        if ($callback !== null) {
+            // If a callback is provided, register it directly with the event dispatcher
+            $eventName = "eloquent.{$event}: " . static::class;
+            Event::listen($eventName, $callback);
+        } else {
+            // If no callback is provided, use our custom observer registration
+            static::registerModelObserver($event);
+        }
     }
 
     /**
