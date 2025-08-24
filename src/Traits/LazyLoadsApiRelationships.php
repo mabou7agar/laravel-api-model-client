@@ -164,7 +164,13 @@ trait LazyLoadsApiRelationships
             }
         }
         
-        // Fall back to parent implementation
+        // CRITICAL FIX: Check if method exists on current class before forwarding
+        // This prevents methods like newFromApiResponse from being incorrectly forwarded to QueryBuilder
+        if (method_exists($this, $method)) {
+            return $this->$method(...$parameters);
+        }
+        
+        // Fall back to parent implementation only if method doesn't exist on current class
         return parent::__call($method, $parameters);
     }
 }
