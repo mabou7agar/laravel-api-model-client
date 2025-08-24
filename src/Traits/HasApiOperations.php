@@ -180,7 +180,7 @@ trait HasApiOperations
      * @param array $response
      * @return static|null
      */
-    protected function newFromApiResponse($response)
+    protected function newFromApiResponse($response = [])
     {
         if (empty($response)) {
             return null;
