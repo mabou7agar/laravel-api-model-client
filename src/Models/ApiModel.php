@@ -14,7 +14,7 @@ use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 
-abstract class ApiModel extends Model implements ApiModelInterface
+class ApiModel extends Model implements ApiModelInterface
 {
     use ApiModelAttributes;
     use ApiModelCaching;
