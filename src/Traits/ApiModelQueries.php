@@ -62,27 +62,28 @@ trait ApiModelQueries
      * @param  array  $columns
      * @return \Illuminate\Database\Eloquent\Model|static|null
      */
-    public function find($id, $columns = ['*'])
+    public static function find($id, $columns = ['*'])
     {
-        if (!$this->isApiModel()) {
+        $instance = new static;
+        if (!$instance->isApiModel()) {
             return parent::find($id, $columns);
         }
 
         // Generate cache key
-        $cacheKey = $this->generateCacheKey('find', $id);
+        $cacheKey = $instance->generateCacheKey('find', $id);
 
         // Use cache if enabled
-        return $this->cacheRemember($cacheKey, function () use ($id, $columns) {
+        return $instance->cacheRemember($cacheKey, function () use ($id, $columns, $instance) {
             // Fire the retrieving event
-            if ($this->fireApiModelEvent('retrieving') === false) {
+            if ($instance->fireApiModelEvent('retrieving') === false) {
                 return null;
             }
 
             // Get the API client
-            $apiClient = $this->getApiClient();
+            $apiClient = $instance->getApiClient();
 
             // Build the endpoint
-            $endpoint = $this->getApiEndpoint();
+            $endpoint = $instance->getApiEndpoint();
             if (!str_ends_with($endpoint, '/')) {
                 $endpoint .= '/';
             }
@@ -93,15 +94,15 @@ trait ApiModelQueries
                 $response = $apiClient->get($endpoint);
 
                 // Map the API response to model attributes
-                $attributes = $this->mapApiAttributes($response);
+                $attributes = $instance->mapApiAttributes($response);
 
                 // Create a new model instance with the attributes
-                $model = $this->newInstance($attributes, true);
+                $model = $instance->newInstance($attributes, true);
                 $model->exists = true;
 
                 // Merge with local data if enabled
-                if ($this->shouldMergeWithLocalData()) {
-                    $model = $this->mergeWithLocalData($model);
+                if ($instance->shouldMergeWithLocalData()) {
+                    $model = $instance->mergeWithLocalData($model);
                 }
 
                 // Fire the retrieved event
@@ -109,7 +110,7 @@ trait ApiModelQueries
 
                 return $model;
             } catch (\Exception $e) {
-                $this->handleApiError("Failed to find model with ID {$id}: " . $e->getMessage(), null, $e->getCode());
+                $instance->handleApiError("Failed to find model with ID {$id}: " . $e->getMessage(), null, $e->getCode());
                 return null;
             }
         });
@@ -121,27 +122,28 @@ trait ApiModelQueries
      * @param  array  $columns
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function all($columns = ['*'])
+    public static function all($columns = ['*'])
     {
-        if (!$this->isApiModel()) {
+        $instance = new static;
+        if (!$instance->isApiModel()) {
             return parent::all($columns);
         }
 
         // Generate cache key
-        $cacheKey = $this->generateCacheKey('all');
+        $cacheKey = $instance->generateCacheKey('all');
 
         // Use cache if enabled
-        return $this->cacheRemember($cacheKey, function () use ($columns) {
+        return $instance->cacheRemember($cacheKey, function () use ($columns, $instance) {
             // Fire the retrieving event
-            if ($this->fireApiModelEvent('retrieving') === false) {
-                return $this->newCollection();
+            if ($instance->fireApiModelEvent('retrieving') === false) {
+                return $instance->newCollection();
             }
 
             // Get the API client
-            $apiClient = $this->getApiClient();
+            $apiClient = $instance->getApiClient();
 
             // Build the endpoint
-            $endpoint = $this->getApiEndpoint();
+            $endpoint = $instance->getApiEndpoint();
 
             try {
                 // Make the API request
@@ -153,19 +155,19 @@ trait ApiModelQueries
                 }
 
                 // Create a collection of models
-                $models = $this->newCollection();
+                $models = $instance->newCollection();
 
                 foreach ($response as $item) {
                     // Map the API response to model attributes
-                    $attributes = $this->mapApiAttributes($item);
+                    $attributes = $instance->mapApiAttributes($item);
 
                     // Create a new model instance with the attributes
-                    $model = $this->newInstance($attributes, true);
+                    $model = $instance->newInstance($attributes, true);
                     $model->exists = true;
 
                     // Merge with local data if enabled
-                    if ($this->shouldMergeWithLocalData()) {
-                        $model = $this->mergeWithLocalData($model);
+                    if ($instance->shouldMergeWithLocalData()) {
+                        $model = $instance->mergeWithLocalData($model);
                     }
 
                     // Fire the retrieved event
@@ -176,8 +178,8 @@ trait ApiModelQueries
 
                 return $models;
             } catch (\Exception $e) {
-                $this->handleApiError("Failed to get all models: " . $e->getMessage(), null, $e->getCode());
-                return $this->newCollection();
+                $instance->handleApiError("Failed to get all models: " . $e->getMessage(), null, $e->getCode());
+                return $instance->newCollection();
             }
         });
     }
