@@ -26,7 +26,7 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
     {
         // Publish configuration
         $this->publishes([
-            __DIR__ . '/Config/api-model-relations.php' => config_path('api-model-relations.php'),
+            __DIR__ . '/../config/api_model.php' => config_path('api-model-client.php'),
         ], 'config');
 
         // Register commands
@@ -50,12 +50,12 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
     {
         // Merge configuration
         $this->mergeConfigFrom(
-            __DIR__ . '/Config/api-model-relations.php', 'api-model-relations'
+            __DIR__ . '/../config/api_model.php', 'api-model-client'
         );
 
         // Register API client
         $this->app->singleton('api-client', function ($app) {
-            $config = $app['config']['api-model-relations'];
+            $config = $app['config']['api-model-client'];
             $client = new ApiClient($config['client']['base_url'] ?? null);
             
             // Set up authentication if configured
@@ -77,7 +77,7 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
         // Register API pipeline
         $this->app->singleton('api-pipeline', function ($app) {
             $pipeline = new ApiPipeline();
-            $config = $app['config']['api-model-relations'];
+            $config = $app['config']['api-model-client'];
             
             // Add logging middleware if enabled
             if ($config['error_handling']['log_requests'] ?? true) {

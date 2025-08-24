@@ -65,12 +65,12 @@ composer require m-tech-stack/laravel-api-model-client
 After installing, publish the configuration file:
 
 ```bash
-php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\ApiModelRelationsServiceProvider"
+php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\ApiModelRelationsServiceProvider" --tag="config"
 ```
 
 ## Configuration
 
-The package can be configured via the `config/api-model-relations.php` file:
+The package can be configured via the `config/api-model-client.php` file:
 
 ```php
 return [
