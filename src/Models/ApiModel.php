@@ -23,7 +23,17 @@ abstract class ApiModel extends Model implements ApiModelInterface
     use ApiModelInterfaceMethods;
     use ApiModelQueries;
     use HasApiRelationships;
-    use LazyLoadsApiRelationships;
+    use LazyLoadsApiRelationships {
+        // Resolve method collisions
+        ApiModelCaching::getCacheTtl insteadof ApiModelInterfaceMethods;
+        ApiModelQueries::delete insteadof ApiModelInterfaceMethods;
+        ApiModelQueries::save insteadof ApiModelInterfaceMethods;
+        
+        // Create aliases for the conflicting methods from ApiModelInterfaceMethods
+        ApiModelInterfaceMethods::getCacheTtl as getInterfaceCacheTtl;
+        ApiModelInterfaceMethods::delete as deleteFromInterface;
+        ApiModelInterfaceMethods::save as saveFromInterface;
+    }
 
     /**
      * Create a new ApiModel instance.
