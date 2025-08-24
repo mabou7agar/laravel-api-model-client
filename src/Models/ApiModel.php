@@ -254,4 +254,46 @@ class ApiModel extends Model implements ApiModelInterface
             return false;
         }
     }
+
+    /**
+     * Extract items from an API response, handling different response formats.
+     * This method is used by both the model and query builder for consistent data parsing.
+     *
+     * @param array $response
+     * @return array
+     */
+    public function extractItemsFromResponse($response)
+    {
+        // Handle empty response
+        if (empty($response)) {
+            return [];
+        }
+
+        // If response has a 'data' key (nested structure like Bagisto API)
+        if (isset($response['data'])) {
+            $data = $response['data'];
+            
+            // If data is an array of items, return it
+            if (is_array($data) && isset($data[0])) {
+                return $data;
+            }
+            
+            // If data is a single item, wrap it in an array
+            if (is_array($data) && !isset($data[0])) {
+                return [$data];
+            }
+        }
+
+        // If response is already an array of items (flat structure)
+        if (isset($response[0])) {
+            return $response;
+        }
+
+        // If response is a single item, wrap it in an array
+        if (is_array($response) && !empty($response)) {
+            return [$response];
+        }
+
+        return [];
+    }
 }

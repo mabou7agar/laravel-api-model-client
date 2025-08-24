@@ -331,6 +331,27 @@ class ApiQueryBuilder
     }
 
     /**
+     * Create models from API response items.
+     * Alias for processApiResponse for backward compatibility.
+     *
+     * @param array $items
+     * @return \Illuminate\Support\Collection
+     */
+    public function createModelsFromItems($items)
+    {
+        $models = [];
+        
+        foreach ($items as $item) {
+            $model = $this->model->newFromApiResponse($item);
+            if ($model !== null) {
+                $models[] = $model;
+            }
+        }
+        
+        return new Collection($models);
+    }
+
+    /**
      * Extract items from an API response, handling different response formats.
      *
      * @param array $response
