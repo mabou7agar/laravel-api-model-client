@@ -58,6 +58,11 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
             $config = $app['config']['api-model-client'];
             $client = new ApiClient($config);
             
+            // Set base URL if configured
+            if (isset($config['client']['base_url'])) {
+                $client->setBaseUrl($config['client']['base_url']);
+            }
+            
             // Set up authentication if configured
             if (isset($config['auth']['strategy'])) {
                 $authStrategy = $this->resolveAuthStrategy($config['auth']);

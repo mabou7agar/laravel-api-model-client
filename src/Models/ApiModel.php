@@ -30,11 +30,15 @@ class ApiModel extends Model implements ApiModelInterface
         ApiModelQueries::delete insteadof ApiModelInterfaceMethods;
         ApiModelQueries::save insteadof ApiModelInterfaceMethods;
         
+        // CRITICAL FIX: Ensure LazyLoadsApiRelationships __call doesn't interfere with newFromApiResponse
+        LazyLoadsApiRelationships::__call as lazyLoadsCall;
+        
         // Create aliases for the conflicting methods from ApiModelInterfaceMethods
         ApiModelInterfaceMethods::getCacheTtl as getInterfaceCacheTtl;
         ApiModelInterfaceMethods::delete as deleteFromInterface;
         ApiModelInterfaceMethods::save as saveFromInterface;
     }
+
 
     /**
      * Create a new ApiModel instance.
@@ -173,8 +177,14 @@ class ApiModel extends Model implements ApiModelInterface
         $apiClient = $instance->getApiClient();
         $response = $apiClient->get($instance->getApiEndpoint());
 
-        return collect($response)->map(function ($data) {
-            return new static($data);
+        // Handle nested data structure (e.g., Bagisto API returns {data: [...], meta: {...}})
+        $data = $response;
+        if (is_array($response) && isset($response['data']) && is_array($response['data'])) {
+            $data = $response['data'];
+        }
+
+        return collect($data)->map(function ($item) {
+            return new static($item);
         });
     }
 
@@ -191,7 +201,14 @@ class ApiModel extends Model implements ApiModelInterface
 
         try {
             $response = $apiClient->get($instance->getApiEndpoint() . '/' . $id);
-            return new static($response);
+            
+            // Handle nested data structure for single items
+            $data = $response;
+            if (is_array($response) && isset($response['data']) && is_array($response['data'])) {
+                $data = $response['data'];
+            }
+            
+            return new static($data);
         } catch (\Exception $e) {
             return null;
         }
@@ -240,5 +257,124 @@ class ApiModel extends Model implements ApiModelInterface
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * Extract items from an API response, handling different response formats.
+     * This method is used by both the model and query builder for consistent data parsing.
+     *
+     * @param array $response
+     * @return array
+     */
+    public function extractItemsFromResponse($response)
+    {
+        // Handle empty response
+        if (empty($response)) {
+            return [];
+        }
+
+        // If response has a 'data' key (nested structure like Bagisto API)
+        if (isset($response['data'])) {
+            $data = $response['data'];
+            
+            // If data is an array of items, return it
+            if (is_array($data) && isset($data[0])) {
+                return $data;
+            }
+            
+            // If data is a single item, wrap it in an array
+            if (is_array($data) && !isset($data[0])) {
+                return [$data];
+            }
+        }
+
+        // If response is already an array of items (flat structure)
+        if (isset($response[0])) {
+            return $response;
+        }
+
+        // If response is a single item, wrap it in an array
+        if (is_array($response) && !empty($response)) {
+            return [$response];
+        }
+
+        return [];
+    }
+
+    /**
+     * Create a new model instance from an API response.
+     * This method is implemented in the ApiModelInterfaceMethods trait.
+     *
+     * @param array $response
+     * @return static|null
+     */
+    public function newFromApiResponse($response = [])
+    {
+        // This method is implemented in the ApiModelInterfaceMethods trait
+        // The trait method will handle the actual logic
+        if (empty($response)) {
+            return null;
+        }
+        
+        // Map API fields to model attributes if method exists
+        if (method_exists($this, 'mapApiResponseToAttributes')) {
+            $attributes = $this->mapApiResponseToAttributes($response);
+        } else {
+            $attributes = $response;
+        }
+        
+        // Cast attributes to their proper types if method exists
+        if (method_exists($this, 'castApiResponseData')) {
+            $attributes = $this->castApiResponseData($attributes);
+        }
+        
+        $model = new static($attributes);
+        $model->exists = true;
+        
+        return $model;
+    }
+
+    /**
+     * Override Laravel's all() method to use API instead of database.
+     * This provides a seamless experience for users expecting standard Eloquent behavior.
+     *
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function all($columns = ['*'])
+    {
+        // Redirect to allFromApi() method to use API instead of database
+        return static::allFromApi();
+    }
+
+    /**
+     * Override initializeTraits to handle missing trait initializers gracefully.
+     * This prevents the "Undefined array key" and "foreach() argument must be of type array|object" warnings.
+     */
+    protected function initializeTraits()
+    {
+        // Check if trait initializers exist for this class before trying to iterate
+        if (isset(static::$traitInitializers[static::class]) && 
+            is_array(static::$traitInitializers[static::class])) {
+            foreach (static::$traitInitializers[static::class] as $method) {
+                if (method_exists($this, $method)) {
+                    $this->{$method}();
+                }
+            }
+        }
+    }
+
+    /**
+     * Override boot method to ensure proper trait initialization for API models.
+     */
+    protected static function boot()
+    {
+        // Initialize trait initializers array if not set
+        if (!isset(static::$traitInitializers[static::class])) {
+            static::$traitInitializers[static::class] = [];
+        }
+        
+        // Call parent boot to handle standard Laravel model initialization
+        parent::boot();
     }
 }

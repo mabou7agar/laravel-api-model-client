@@ -742,13 +742,25 @@ trait ApiModelInterfaceMethods
      * @param array $response
      * @return static|null
      */
-    protected function newFromApiResponse($response)
+    protected function newFromApiResponse($response = [])
     {
         if (empty($response)) {
             return null;
         }
         
-        $model = new static($response);
+        // Map API fields to model attributes if method exists
+        if (method_exists($this, 'mapApiResponseToAttributes')) {
+            $attributes = $this->mapApiResponseToAttributes($response);
+        } else {
+            $attributes = $response;
+        }
+        
+        // Cast attributes to their proper types if method exists
+        if (method_exists($this, 'castApiResponseData')) {
+            $attributes = $this->castApiResponseData($attributes);
+        }
+        
+        $model = new static($attributes);
         $model->exists = true;
         
         return $model;

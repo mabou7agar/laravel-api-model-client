@@ -164,7 +164,29 @@ trait LazyLoadsApiRelationships
             }
         }
         
-        // Fall back to parent implementation
+        // CRITICAL FIX: Special handling for newFromApiResponse to prevent forwarding to QueryBuilder
+        if ($method === 'newFromApiResponse') {
+            // Check if the method exists in the class hierarchy (including parent classes and traits)
+            $reflection = new \ReflectionClass($this);
+            if ($reflection->hasMethod('newFromApiResponse')) {
+                // Call the method directly using reflection to bypass __call interference
+                $reflectionMethod = $reflection->getMethod('newFromApiResponse');
+                return $reflectionMethod->invoke($this, ...$parameters);
+            }
+        }
+        
+        // CRITICAL FIX: Check if method exists on current class before forwarding
+        // This prevents other methods from being incorrectly forwarded to QueryBuilder
+        if (method_exists($this, $method)) {
+            return $this->$method(...$parameters);
+        }
+        
+        // Additional check for methods defined in traits
+        if (method_exists(get_class($this), $method)) {
+            return $this->$method(...$parameters);
+        }
+        
+        // Fall back to parent implementation only if method doesn't exist on current class
         return parent::__call($method, $parameters);
     }
 }

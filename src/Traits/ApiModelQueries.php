@@ -394,4 +394,39 @@ trait ApiModelQueries
 
         return true;
     }
+
+    /**
+     * Create a new query builder instance and call the take method.
+     *
+     * @param int $value
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function take($value)
+    {
+        return (new static)->newApiQuery()->take($value);
+    }
+
+    /**
+     * Create a new query builder instance and call the limit method.
+     *
+     * @param int $value
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function limit($value)
+    {
+        return (new static)->newApiQuery()->limit($value);
+    }
+
+    /**
+     * Create a new query builder instance and call the where method.
+     *
+     * @param string $column
+     * @param mixed $operator
+     * @param mixed $value
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function where($column, $operator = null, $value = null)
+    {
+        return (new static)->newApiQuery()->where($column, $operator, $value);
+    }
 }
