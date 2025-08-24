@@ -2,7 +2,7 @@
 
 namespace MTechStack\LaravelApiModelClient\Traits;
 
-use MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder;
+use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 use Illuminate\Support\Collection;
 
 /**
@@ -13,7 +13,7 @@ trait ApiModelQueries
     /**
      * Create a new API query builder for the model.
      *
-     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function newApiQuery()
     {
@@ -23,7 +23,7 @@ trait ApiModelQueries
     /**
      * Get a new query builder instance for the model.
      *
-     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function newQuery()
     {
