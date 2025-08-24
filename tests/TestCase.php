@@ -5,6 +5,7 @@ namespace MTechStack\LaravelApiModelClient\Tests;
 use Orchestra\Testbench\TestCase as Orchestra;
 use MTechStack\LaravelApiModelClient\ApiModelRelationsServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 
 abstract class TestCase extends Orchestra
 {

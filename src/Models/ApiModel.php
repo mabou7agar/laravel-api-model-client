@@ -296,4 +296,37 @@ class ApiModel extends Model implements ApiModelInterface
 
         return [];
     }
+
+    /**
+     * Create a new model instance from an API response.
+     * This method is implemented in the ApiModelInterfaceMethods trait.
+     *
+     * @param array $response
+     * @return static|null
+     */
+    public function newFromApiResponse($response = [])
+    {
+        // This method is implemented in the ApiModelInterfaceMethods trait
+        // The trait method will handle the actual logic
+        if (empty($response)) {
+            return null;
+        }
+        
+        // Map API fields to model attributes if method exists
+        if (method_exists($this, 'mapApiResponseToAttributes')) {
+            $attributes = $this->mapApiResponseToAttributes($response);
+        } else {
+            $attributes = $response;
+        }
+        
+        // Cast attributes to their proper types if method exists
+        if (method_exists($this, 'castApiResponseData')) {
+            $attributes = $this->castApiResponseData($attributes);
+        }
+        
+        $model = new static($attributes);
+        $model->exists = true;
+        
+        return $model;
+    }
 }

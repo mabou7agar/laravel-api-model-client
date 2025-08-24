@@ -39,7 +39,7 @@ class ApiModelTest extends TestCase
     {
         $model = new TestApiModel();
         
-        $this->assertTrue($model instanceof ApiModel);
+        $this->assertInstanceOf(ApiModel::class, $model);
         $this->assertEquals('api/v1/test-products', $model->getApiEndpoint());
     }
 
@@ -62,8 +62,8 @@ class ApiModelTest extends TestCase
         $this->assertEquals('Test Product', $model->name);
         $this->assertEquals('test-sku', $model->sku);
         $this->assertEquals(150.00, $model->price);
-        $this->assertTrue($model->status);
-        $this->assertTrue($model->in_stock);
+        $this->assertEquals(true, $model->status);
+        $this->assertEquals(true, $model->in_stock);
     }
 
     /** @test */
@@ -82,11 +82,11 @@ class ApiModelTest extends TestCase
         $model = new TestApiModel();
         $newModel = $model->newFromApiResponse($responseData);
 
-        $this->assertTrue($newModel instanceof TestApiModel);
+        $this->assertInstanceOf(TestApiModel::class, $newModel);
         $this->assertEquals(566, $newModel->id);
         $this->assertEquals('Test Product', $newModel->name);
         $this->assertEquals(150.00, $newModel->price);
-        $this->assertTrue($newModel->exists);
+        $this->assertEquals(true, $newModel->exists);
     }
 
     /** @test */
@@ -120,7 +120,7 @@ class ApiModelTest extends TestCase
     {
         $queryBuilder = TestApiModel::query();
         
-        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
+        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
     }
 
     /** @test */
@@ -128,7 +128,7 @@ class ApiModelTest extends TestCase
     {
         $queryBuilder = TestApiModel::take(5);
         
-        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
+        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
     }
 
     /** @test */
@@ -136,7 +136,7 @@ class ApiModelTest extends TestCase
     {
         $queryBuilder = TestApiModel::limit(10);
         
-        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
+        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
     }
 
     /** @test */
@@ -144,7 +144,7 @@ class ApiModelTest extends TestCase
     {
         $queryBuilder = TestApiModel::where('status', 1);
         
-        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
+        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
     }
 
     /** @test */
@@ -154,7 +154,7 @@ class ApiModelTest extends TestCase
             ->take(5)
             ->limit(3);
         
-        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
+        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
     }
 
     /** @test */
@@ -193,7 +193,7 @@ class ApiModelTest extends TestCase
 
         $products = TestApiModel::allFromApi();
 
-        $this->assertTrue($products instanceof Collection);
+        $this->assertInstanceOf(Collection::class, $products);
         $this->assertCount(2, $products);
         $this->assertEquals(566, $products->first()->id);
         $this->assertEquals('Product 1', $products->first()->name);
@@ -222,7 +222,7 @@ class ApiModelTest extends TestCase
 
         $product = TestApiModel::findFromApi(566);
 
-        $this->assertTrue($product instanceof TestApiModel);
+        $this->assertInstanceOf(TestApiModel::class, $product);
         $this->assertEquals(566, $product->id);
         $this->assertEquals('Single Product', $product->name);
         $this->assertEquals(150.00, $product->price);
