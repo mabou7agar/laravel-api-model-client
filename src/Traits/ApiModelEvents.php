@@ -3,6 +3,7 @@
 namespace MTechStack\LaravelApiModelClient\Traits;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Events\Dispatcher;
 
 /**
  * Trait for handling API model events
@@ -30,7 +31,16 @@ trait ApiModelEvents
      */
     protected static function bootApiModelEvents()
     {
-        static::registerModelEvents();
+        // Only register events if we're not in a testing environment
+        // or if events are explicitly enabled
+        try {
+            if (app()->environment() !== 'testing' || config('api-model-client.events.enabled', true)) {
+                static::registerModelEvents();
+            }
+        } catch (\Exception $e) {
+            // Graceful fallback for environments where app() is not available
+            static::registerModelEvents();
+        }
     }
 
     /**
@@ -88,10 +98,13 @@ trait ApiModelEvents
      */
     protected static function registerModelObserver($event)
     {
-        static::$dispatcher->listen("api-model.{$event}: " . static::class, function ($model, $data = null) use ($event) {
-            if (method_exists($model, 'fireCustomModelEvent')) {
+        $eventName = "api-model.{$event}: " . static::class;
+        
+        Event::listen($eventName, function ($model, $data = null) use ($event) {
+            if (is_object($model) && method_exists($model, 'fireCustomModelEvent')) {
                 return $model->fireCustomModelEvent($event, $data);
             }
+            return null;
         });
     }
 
@@ -104,7 +117,7 @@ trait ApiModelEvents
      */
     protected function fireCustomModelEvent($event, $data = null)
     {
-        if (! $this->eventsEnabled) {
+        if (! $this->supportsEvents()) {
             return null;
         }
 
@@ -118,9 +131,21 @@ trait ApiModelEvents
             }
         }
 
-        return static::$dispatcher->until(
-            "api-model.{$event}: " . static::class, [$this, $data]
-        );
+        $eventName = "api-model.{$event}: " . static::class;
+        
+        // Laravel 8+ compatibility - use Event facade with proper error handling
+        try {
+            $dispatcher = $this->getEventDispatcher();
+            if ($dispatcher && method_exists($dispatcher, 'until')) {
+                return $dispatcher->until($eventName, [$this, $data]);
+            }
+            
+            // Fallback to Event facade
+            return Event::until($eventName, [$this, $data]);
+        } catch (\Exception $e) {
+            // Graceful fallback for compatibility issues
+            return null;
+        }
     }
 
     /**
@@ -189,5 +214,30 @@ trait ApiModelEvents
     public function areEventsEnabled()
     {
         return $this->eventsEnabled;
+    }
+
+    /**
+     * Get the event dispatcher instance.
+     * Laravel 8+ compatibility method.
+     *
+     * @return \Illuminate\Events\Dispatcher|null
+     */
+    protected function getEventDispatcher()
+    {
+        try {
+            return app('events');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Check if the current Laravel version supports the event system properly.
+     *
+     * @return bool
+     */
+    protected function supportsEvents()
+    {
+        return $this->getEventDispatcher() !== null && $this->eventsEnabled;
     }
 }
