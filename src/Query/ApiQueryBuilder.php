@@ -180,6 +180,17 @@ class ApiQueryBuilder
     }
 
     /**
+     * Alias for the "limit" method.
+     *
+     * @param int $value
+     * @return $this
+     */
+    public function take($value)
+    {
+        return $this->limit($value);
+    }
+
+    /**
      * Set the "offset" value of the query.
      *
      * @param int $offset
@@ -283,6 +294,16 @@ class ApiQueryBuilder
             // Return empty collection
             return new Collection();
         }
+    }
+
+    /**
+     * Alias for the get() method.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getFromApi()
+    {
+        return $this->get();
     }
 
     /**

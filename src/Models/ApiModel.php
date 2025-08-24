@@ -173,8 +173,14 @@ class ApiModel extends Model implements ApiModelInterface
         $apiClient = $instance->getApiClient();
         $response = $apiClient->get($instance->getApiEndpoint());
 
-        return collect($response)->map(function ($data) {
-            return new static($data);
+        // Handle nested data structure (e.g., Bagisto API returns {data: [...], meta: {...}})
+        $data = $response;
+        if (is_array($response) && isset($response['data']) && is_array($response['data'])) {
+            $data = $response['data'];
+        }
+
+        return collect($data)->map(function ($item) {
+            return new static($item);
         });
     }
 
@@ -191,7 +197,14 @@ class ApiModel extends Model implements ApiModelInterface
 
         try {
             $response = $apiClient->get($instance->getApiEndpoint() . '/' . $id);
-            return new static($response);
+            
+            // Handle nested data structure for single items
+            $data = $response;
+            if (is_array($response) && isset($response['data']) && is_array($response['data'])) {
+                $data = $response['data'];
+            }
+            
+            return new static($data);
         } catch (\Exception $e) {
             return null;
         }

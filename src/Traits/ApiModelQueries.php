@@ -2,7 +2,7 @@
 
 namespace MTechStack\LaravelApiModelClient\Traits;
 
-use MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder;
+use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 use Illuminate\Support\Collection;
 
 /**
@@ -13,7 +13,7 @@ trait ApiModelQueries
     /**
      * Create a new API query builder for the model.
      *
-     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function newApiQuery()
     {
@@ -23,7 +23,7 @@ trait ApiModelQueries
     /**
      * Get a new query builder instance for the model.
      *
-     * @return \MTechStack\LaravelApiModelClient\QueryBuilder\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
      */
     public function newQuery()
     {
@@ -393,5 +393,40 @@ trait ApiModelQueries
         }
 
         return true;
+    }
+
+    /**
+     * Create a new query builder instance and call the take method.
+     *
+     * @param int $value
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function take($value)
+    {
+        return (new static)->newApiQuery()->take($value);
+    }
+
+    /**
+     * Create a new query builder instance and call the limit method.
+     *
+     * @param int $value
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function limit($value)
+    {
+        return (new static)->newApiQuery()->limit($value);
+    }
+
+    /**
+     * Create a new query builder instance and call the where method.
+     *
+     * @param string $column
+     * @param mixed $operator
+     * @param mixed $value
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function where($column, $operator = null, $value = null)
+    {
+        return (new static)->newApiQuery()->where($column, $operator, $value);
     }
 }
