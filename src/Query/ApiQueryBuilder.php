@@ -317,13 +317,32 @@ class ApiQueryBuilder
         // Extract items from the response
         $items = $this->extractItemsFromResponse($response);
         
-        // Create a collection of models
+        // Create a collection of models using reflection to bypass __call interference
         $models = [];
         
         foreach ($items as $item) {
-            $model = $this->model->newFromApiResponse($item);
-            if ($model !== null) {
-                $models[] = $model;
+            if (empty($item)) {
+                continue;
+            }
+            
+            try {
+                // Create a fresh instance of the model class
+                $modelClass = get_class($this->model);
+                $newModel = new $modelClass();
+                
+                // Use reflection to call newFromApiResponse directly, bypassing all __call interference
+                $reflection = new \ReflectionClass($newModel);
+                if ($reflection->hasMethod('newFromApiResponse')) {
+                    $method = $reflection->getMethod('newFromApiResponse');
+                    $model = $method->invoke($newModel, $item);
+                    if ($model !== null) {
+                        $models[] = $model;
+                    }
+                }
+                
+            } catch (\Exception $e) {
+                // Log error but continue processing
+                error_log("Failed to create model from API response: " . $e->getMessage());
             }
         }
         
@@ -339,12 +358,32 @@ class ApiQueryBuilder
      */
     public function createModelsFromItems($items)
     {
+        // Create a collection of models using reflection to bypass __call interference
         $models = [];
         
         foreach ($items as $item) {
-            $model = $this->model->newFromApiResponse($item);
-            if ($model !== null) {
-                $models[] = $model;
+            if (empty($item)) {
+                continue;
+            }
+            
+            try {
+                // Create a fresh instance of the model class
+                $modelClass = get_class($this->model);
+                $newModel = new $modelClass();
+                
+                // Use reflection to call newFromApiResponse directly, bypassing all __call interference
+                $reflection = new \ReflectionClass($newModel);
+                if ($reflection->hasMethod('newFromApiResponse')) {
+                    $method = $reflection->getMethod('newFromApiResponse');
+                    $model = $method->invoke($newModel, $item);
+                    if ($model !== null) {
+                        $models[] = $model;
+                    }
+                }
+                
+            } catch (\Exception $e) {
+                // Log error but continue processing
+                error_log("Failed to create model from API response: " . $e->getMessage());
             }
         }
         

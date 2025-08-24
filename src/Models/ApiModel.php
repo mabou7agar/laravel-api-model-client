@@ -30,11 +30,15 @@ class ApiModel extends Model implements ApiModelInterface
         ApiModelQueries::delete insteadof ApiModelInterfaceMethods;
         ApiModelQueries::save insteadof ApiModelInterfaceMethods;
         
+        // CRITICAL FIX: Ensure LazyLoadsApiRelationships __call doesn't interfere with newFromApiResponse
+        LazyLoadsApiRelationships::__call as lazyLoadsCall;
+        
         // Create aliases for the conflicting methods from ApiModelInterfaceMethods
         ApiModelInterfaceMethods::getCacheTtl as getInterfaceCacheTtl;
         ApiModelInterfaceMethods::delete as deleteFromInterface;
         ApiModelInterfaceMethods::save as saveFromInterface;
     }
+
 
     /**
      * Create a new ApiModel instance.
