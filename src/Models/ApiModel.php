@@ -11,6 +11,7 @@ use MTechStack\LaravelApiModelClient\Traits\ApiModelInterfaceMethods;
 use MTechStack\LaravelApiModelClient\Traits\ApiModelQueries;
 use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
+use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
@@ -24,19 +25,30 @@ class ApiModel extends Model implements ApiModelInterface
     use ApiModelInterfaceMethods;
     use ApiModelQueries;
     use HasApiRelationships;
-    use LazyLoadsApiRelationships {
-        // Resolve method collisions
+    use LazyLoadsApiRelationships;
+    use HybridDataSource {
+        // HybridDataSource methods take precedence over other traits
+        HybridDataSource::find insteadof ApiModelQueries;
+        HybridDataSource::all insteadof ApiModelQueries;
+        HybridDataSource::save insteadof ApiModelQueries, ApiModelInterfaceMethods;
+        HybridDataSource::delete insteadof ApiModelQueries, ApiModelInterfaceMethods;
+        HybridDataSource::create insteadof ApiModelQueries;
+        
+        // Resolve other method collisions
         ApiModelCaching::getCacheTtl insteadof ApiModelInterfaceMethods;
-        ApiModelQueries::delete insteadof ApiModelInterfaceMethods;
-        ApiModelQueries::save insteadof ApiModelInterfaceMethods;
         
         // CRITICAL FIX: Ensure LazyLoadsApiRelationships __call doesn't interfere with newFromApiResponse
         LazyLoadsApiRelationships::__call as lazyLoadsCall;
         
-        // Create aliases for the conflicting methods from ApiModelInterfaceMethods
+        // Create aliases for overridden methods
+        ApiModelQueries::find as findFromQueries;
+        ApiModelQueries::all as allFromQueries;
+        ApiModelQueries::save as saveFromQueries;
+        ApiModelQueries::delete as deleteFromQueries;
         ApiModelInterfaceMethods::getCacheTtl as getInterfaceCacheTtl;
         ApiModelInterfaceMethods::delete as deleteFromInterface;
         ApiModelInterfaceMethods::save as saveFromInterface;
+        ApiModelInterfaceMethods::saveToApi as saveToApiFromTrait;
     }
 
 
@@ -216,10 +228,12 @@ class ApiModel extends Model implements ApiModelInterface
 
     /**
      * Save the model to the API.
+     * Compatible with both public interface and HybridDataSource trait.
      *
+     * @param array $options
      * @return bool
      */
-    public function saveToApi()
+    public function saveToApi(array $options = [])
     {
         $apiClient = $this->getApiClient();
         $data = $this->getAttributes();
@@ -376,5 +390,262 @@ class ApiModel extends Model implements ApiModelInterface
         
         // Call parent boot to handle standard Laravel model initialization
         parent::boot();
+    }
+
+
+
+    /**
+     * Create a new record via API.
+     *
+     * @param array $options
+     * @return bool
+     */
+    protected function createViaApi(array $options = []): bool
+    {
+        try {
+            $client = app('api-client');
+            $response = $client->post($this->getApiEndpoint(), $this->getAttributes());
+            
+            if ($response && isset($response['data'])) {
+                $this->fill($response['data']);
+                $this->exists = true;
+                $this->wasRecentlyCreated = true;
+                return true;
+            }
+            
+            return false;
+        } catch (\Exception $e) {
+            \Log::error("API create failed for " . static::class, [
+                'error' => $e->getMessage(),
+                'attributes' => $this->getAttributes()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Update an existing record via API.
+     *
+     * @param array $options
+     * @return bool
+     */
+    protected function updateViaApi(array $options = []): bool
+    {
+        try {
+            $client = app('api-client');
+            $endpoint = $this->getApiEndpoint() . '/' . $this->getKey();
+            $response = $client->put($endpoint, $this->getAttributes());
+            
+            if ($response && isset($response['data'])) {
+                $this->fill($response['data']);
+                return true;
+            }
+            
+            return false;
+        } catch (\Exception $e) {
+            \Log::error("API update failed for " . static::class, [
+                'error' => $e->getMessage(),
+                'attributes' => $this->getAttributes()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Delete record via API.
+     *
+     * @return bool
+     */
+    protected function deleteFromApiOnly(): bool
+    {
+        try {
+            $client = app('api-client');
+            $endpoint = $this->getApiEndpoint() . '/' . $this->getKey();
+            $response = $client->delete($endpoint);
+            
+            return $response !== false;
+        } catch (\Exception $e) {
+            \Log::error("API delete failed for " . static::class, [
+                'error' => $e->getMessage(),
+                'id' => $this->getKey()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Delete using hybrid approach.
+     *
+     * @return bool|null
+     */
+    protected function deleteHybrid(): bool
+    {
+        $dbDeleted = false;
+        $apiDeleted = false;
+
+        // Try database first
+        try {
+            $dbDeleted = parent::delete();
+        } catch (\Exception $e) {
+            \Log::warning("Database delete failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Try API as fallback or additional sync
+        try {
+            $apiDeleted = $this->deleteFromApiOnly();
+        } catch (\Exception $e) {
+            \Log::warning("API delete failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return $dbDeleted || $apiDeleted;
+    }
+
+    /**
+     * Delete using API first approach.
+     *
+     * @return bool
+     */
+    protected function deleteApiFirst(): bool
+    {
+        try {
+            $apiDeleted = $this->deleteFromApiOnly();
+            
+            if ($apiDeleted) {
+                // Sync to database
+                parent::delete();
+                return true;
+            }
+        } catch (\Exception $e) {
+            \Log::warning("API first delete failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Fallback to database
+        return parent::delete();
+    }
+
+    /**
+     * Delete using dual sync approach.
+     *
+     * @return bool
+     */
+    protected function deleteDualSync(): bool
+    {
+        $dbDeleted = false;
+        $apiDeleted = false;
+
+        // Delete from both sources
+        try {
+            $dbDeleted = parent::delete();
+        } catch (\Exception $e) {
+            \Log::error("Database delete failed in dual sync for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        try {
+            $apiDeleted = $this->deleteFromApiOnly();
+        } catch (\Exception $e) {
+            \Log::error("API delete failed in dual sync for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return $dbDeleted && $apiDeleted;
+    }
+
+    /**
+     * Create using API only.
+     *
+     * @param array $attributes
+     * @return static
+     */
+    protected static function createInApiOnly(array $attributes = [])
+    {
+        $instance = new static($attributes);
+        $instance->saveToApi();
+        return $instance;
+    }
+
+    /**
+     * Create using hybrid approach.
+     *
+     * @param array $attributes
+     * @return static
+     */
+    protected static function createHybrid(array $attributes = [])
+    {
+        // Try database first
+        try {
+            return parent::create($attributes);
+        } catch (\Exception $e) {
+            \Log::warning("Database create failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Fallback to API
+        return static::createInApiOnly($attributes);
+    }
+
+    /**
+     * Create using API first approach.
+     *
+     * @param array $attributes
+     * @return static
+     */
+    protected static function createApiFirst(array $attributes = [])
+    {
+        $instance = static::createInApiOnly($attributes);
+        
+        if ($instance->exists) {
+            // Sync to database
+            try {
+                $instance->syncToDatabase();
+            } catch (\Exception $e) {
+                \Log::warning("Database sync failed after API create for " . static::class, [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        return $instance;
+    }
+
+    /**
+     * Create using dual sync approach.
+     *
+     * @param array $attributes
+     * @return static
+     */
+    protected static function createDualSync(array $attributes = [])
+    {
+        $dbModel = null;
+        $apiModel = null;
+
+        // Create in both sources
+        try {
+            $dbModel = parent::create($attributes);
+        } catch (\Exception $e) {
+            \Log::error("Database create failed in dual sync for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        try {
+            $apiModel = static::createInApiOnly($attributes);
+        } catch (\Exception $e) {
+            \Log::error("API create failed in dual sync for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Return the API model as it's typically more current
+        return $apiModel ?: $dbModel;
     }
 }

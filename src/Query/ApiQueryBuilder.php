@@ -250,11 +250,124 @@ class ApiQueryBuilder
     }
 
     /**
-     * Execute the query and get all results.
+     * Execute the query and get all results with pagination support.
      *
      * @return \Illuminate\Support\Collection
      */
     public function get()
+    {
+        // Check if model uses HasApiCache trait for polymorphic caching
+        if (in_array('MTechStack\LaravelApiModelClient\Traits\HasApiCache', class_uses($this->model))) {
+            return $this->getWithPolymorphicCache();
+        }
+        
+        // Fall back to original caching system
+        return $this->getWithOriginalCache();
+    }
+    
+    /**
+     * Get results using polymorphic cache system with pagination support.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    protected function getWithPolymorphicCache()
+    {
+        $queryParams = $this->buildQueryParams();
+        $instance = new (get_class($this->model))();
+        $strategy = $instance->getCacheStrategy();
+        
+        switch ($strategy) {
+            case 'cache_only':
+                return $this->getFromCacheWithPagination($queryParams);
+                
+            case 'api_only':
+                return $this->getFromApiWithPagination($queryParams);
+                
+            case 'hybrid':
+            default:
+                // For paginated requests, prefer API to ensure accurate pagination
+                if (!empty($queryParams['limit']) || !empty($queryParams['offset'])) {
+                    return $this->getFromApiWithPagination($queryParams);
+                }
+                
+                // For non-paginated requests, try cache first
+                $cached = $this->getFromCacheWithPagination($queryParams);
+                return $cached->isNotEmpty() ? $cached : $this->getFromApiWithPagination($queryParams);
+        }
+    }
+    
+    /**
+     * Get results from cache with pagination applied.
+     *
+     * @param array $queryParams
+     * @return \Illuminate\Support\Collection
+     */
+    protected function getFromCacheWithPagination($queryParams)
+    {
+        $instance = new (get_class($this->model))();
+        $apiCacheClass = app()->bound('ApiCache') ? app('ApiCache') : '\MTechStack\LaravelApiModelClient\Models\ApiCache';
+        $cacheQuery = $apiCacheClass::forType($instance->getCacheableType())
+                                ->fresh($instance->getCacheTtl());
+        
+        // Apply pagination to cache query
+        if (isset($queryParams['limit']) && $queryParams['limit'] > 0) {
+            $cacheQuery->limit($queryParams['limit']);
+        }
+        if (isset($queryParams['offset']) && $queryParams['offset'] > 0) {
+            $cacheQuery->offset($queryParams['offset']);
+        }
+        
+        $cacheEntries = $cacheQuery->get();
+        
+        return $cacheEntries->map(function ($cache) use ($instance) {
+            return $instance->newFromApiResponse($cache->api_data);
+        });
+    }
+    
+    /**
+     * Get results from API with pagination and cache them.
+     *
+     * @param array $queryParams
+     * @return \Illuminate\Support\Collection
+     */
+    protected function getFromApiWithPagination($queryParams)
+    {
+        try {
+            // Make API request with pagination parameters
+            $endpoint = $this->model->getApiEndpoint();
+            $response = $this->getApiClient()->get($endpoint, $queryParams);
+            
+            // Process API response
+            $items = $this->processApiResponse($response);
+            
+            // Cache the individual items for future use
+            foreach ($items as $item) {
+                if (isset($item->id) && is_array($item->getAttributes())) {
+                    $item->cacheApiData($item->getAttributes());
+                }
+            }
+            
+            return $items;
+        } catch (\Exception $e) {
+            // Log the error if configured to do so
+            if (config('api-model-relations.error_handling.log_errors', true)) {
+                \Illuminate\Support\Facades\Log::error('Error executing paginated API query', [
+                    'endpoint' => $this->model->getApiEndpoint(),
+                    'query_params' => $queryParams,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+            
+            return new Collection();
+        }
+    }
+    
+    /**
+     * Get results using original cache system (fallback).
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    protected function getWithOriginalCache()
     {
         $cacheKey = $this->getCacheKey();
         $cacheTtl = $this->model->getCacheTtl();

@@ -29,6 +29,26 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
             __DIR__ . '/../config/api_model.php' => config_path('api-model-client.php'),
         ], 'config');
 
+        // Publish API cache configuration
+        $this->publishes([
+            __DIR__ . '/../config/api-cache.php' => config_path('api-cache.php'),
+        ], 'api-cache-config');
+
+        // Publish high-performance cache configuration
+        $this->publishes([
+            __DIR__ . '/../config/high-performance-cache.php' => config_path('high-performance-cache.php'),
+        ], 'high-performance-cache-config');
+
+        // Publish hybrid data source configuration
+        $this->publishes([
+            __DIR__ . '/../config/hybrid-data-source.php' => config_path('hybrid-data-source.php'),
+        ], 'hybrid-data-source-config');
+
+        // Publish API cache migration
+        $this->publishes([
+            __DIR__ . '/../database/migrations/2024_01_01_000000_create_api_cache_table.php' => database_path('migrations/2024_01_01_000000_create_api_cache_table.php'),
+        ], 'api-cache-migration');
+
         // Register commands
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -52,6 +72,33 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__ . '/../config/api_model.php', 'api-model-client'
         );
+
+        // Merge API cache configuration
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/api-cache.php', 'api-cache'
+        );
+
+        // Merge high-performance cache configuration
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/high-performance-cache.php', 'high-performance-cache'
+        );
+
+        // Merge hybrid data source configuration
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/hybrid-data-source.php', 'hybrid-data-source'
+        );
+
+        // Register ApiCache model
+        $this->app->bind('ApiCache', function ($app) {
+            return new \MTechStack\LaravelApiModelClient\Models\ApiCache();
+        });
+
+        // Register High-Performance Cache Service
+        $this->app->singleton(\MTechStack\LaravelApiModelClient\Services\HighPerformanceApiCache::class, function ($app) {
+            return new \MTechStack\LaravelApiModelClient\Services\HighPerformanceApiCache(
+                $app['config']['high-performance-cache']
+            );
+        });
 
         // Register API client
         $this->app->singleton('api-client', function ($app) {
