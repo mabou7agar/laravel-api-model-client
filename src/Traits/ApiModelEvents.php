@@ -34,7 +34,16 @@ trait ApiModelEvents
         // Only register events if we're not in a testing environment
         // or if events are explicitly enabled
         try {
-            if (app()->environment() !== 'testing' || config('api-model-client.events.enabled', true)) {
+            // Check if Laravel app is available and properly initialized
+            if (function_exists('app') && app()->bound('config')) {
+                $environment = app()->environment();
+                $eventsEnabled = config('api-model-client.events.enabled', true);
+                
+                if ($environment !== 'testing' || $eventsEnabled) {
+                    static::registerModelEvents();
+                }
+            } else {
+                // Graceful fallback for standalone usage
                 static::registerModelEvents();
             }
         } catch (\Exception $e) {
