@@ -27,8 +27,9 @@ A powerful Laravel package that enables Eloquent-like models to interact seamles
 - [Middleware Pipeline](#middleware-pipeline)
 - [Error Handling](#error-handling)
 - [Advanced Usage](#advanced-usage)
-  - [Local Database Integration](#local-database-integration)
+  - [Hybrid Data Source Management](#hybrid-data-source-management)
   - [Custom Response Transformers](#custom-response-transformers)
+  - [High-Performance Caching](#high-performance-caching)
   - [API Mocking](#api-mocking)
   - [Performance Optimization](#performance-optimization)
 - [Troubleshooting](#troubleshooting)
@@ -37,22 +38,28 @@ A powerful Laravel package that enables Eloquent-like models to interact seamles
 
 ## Features
 
-- **Eloquent-like API Models**: Use familiar Laravel Eloquent syntax with external APIs
-- **API Relationships**: Define and use relationships between API resources (`hasMany`, `belongsTo`, etc.)
-- **Smart Caching**: Cache API responses with configurable TTL and strategies
-- **Query Builder**: Use Eloquent-like query builder methods for API queries
-- **Pagination Support**: Handle paginated API responses like Eloquent collections
-- **Authentication Strategies**: Support for multiple API authentication methods (Bearer, Basic, API Key)
-- **Error Handling**: Comprehensive error handling and logging for API failures
-- **Local DB Integration**: Optionally merge API data with local database records
-- **Middleware Pipeline**: Process API requests through a configurable middleware pipeline
-- **Event System**: Hook into API request lifecycle with Laravel events
-- **Response Transformers**: Transform API responses into your desired format
-- **API Mocking**: Mock API responses for testing
-- **Developer Tools**: Generate models from OpenAPI/Swagger specs, debug API calls, and generate documentation
-- **Lazy Loading**: Lazy load API relationships to improve performance
-- **Modularized Traits**: Use individual traits to add API model capabilities to your own models
-- **Complex Relationships**: Support for hasManyThrough, morphMany, and other complex relationships
+### 🚀 **Core Capabilities**
+- **Eloquent-like API Models**: Work with external APIs using familiar Eloquent syntax with full Laravel integration
+- **Hybrid Data Source Management**: Intelligent switching between database and API with 5 sophisticated modes (`api_only`, `db_only`, `hybrid`, `api_first`, `dual_sync`)
+- **Advanced Multi-Layer Caching**: High-performance caching system with Redis support, API cache, and configurable TTL
+- **Comprehensive Query Builder**: Chainable query methods with advanced filtering, sorting, pagination, and relationship loading
+- **Full API Relationships**: Complete relationship support (`hasMany`, `belongsTo`, `morphTo`, `hasManyThrough`, etc.) with lazy loading
+
+### 🔧 **Advanced Features**
+- **Multi-Authentication Support**: Bearer tokens, Basic auth, API keys, and custom authentication strategies
+- **Robust Error Handling**: Comprehensive exception handling with retry logic, fallback mechanisms, and detailed logging
+- **Event-Driven Architecture**: Laravel event integration with custom API model events and lifecycle hooks
+- **Extensible Middleware Pipeline**: Built-in middleware for authentication, rate limiting, caching, logging, transformation, and validation
+- **Powerful Response Transformers**: Transform API responses with custom transformer classes and data mapping
+- **Intelligent Database Synchronization**: Seamless sync between API and local database with conflict resolution and timestamp comparison
+
+### 🎯 **Enterprise Features**
+- **High-Performance Caching**: Redis-based caching with intelligent cache warming, invalidation, and distributed caching support
+- **Lazy Relationship Loading**: Efficient relationship loading with automatic API calls and batch loading optimization
+- **Batch Operations**: Bulk create, update, and delete operations with transaction support
+- **Comprehensive Testing Support**: Testing utilities, mock factories, and API response mocking
+- **Console Commands**: Artisan commands for cache management, API operations, and debugging
+- **Developer Tools**: Generate models from OpenAPI/Swagger specs, debug API calls, and auto-generate documentation
 
 ## Installation
 
@@ -70,7 +77,9 @@ php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\MTechSta
 
 ## Configuration
 
-The package can be configured via the `config/api-model-client.php` file:
+The package uses multiple configuration files for different aspects:
+
+### Main Configuration (`config/api_model.php`)
 
 ```php
 return [
@@ -81,46 +90,71 @@ return [
     ],
     
     'auth' => [
-        'strategy' => env('API_MODEL_RELATIONS_AUTH_STRATEGY', 'bearer'), // 'bearer', 'basic', 'api_key'
+        'strategy' => env('API_MODEL_RELATIONS_AUTH_STRATEGY', 'bearer'),
         'credentials' => [
             'token' => env('API_MODEL_RELATIONS_AUTH_TOKEN'),
             'username' => env('API_MODEL_RELATIONS_AUTH_USERNAME'),
             'password' => env('API_MODEL_RELATIONS_AUTH_PASSWORD'),
             'api_key' => env('API_MODEL_RELATIONS_AUTH_API_KEY'),
             'header_name' => env('API_MODEL_RELATIONS_AUTH_HEADER_NAME', 'X-API-KEY'),
-            'use_query_param' => env('API_MODEL_RELATIONS_AUTH_USE_QUERY', false),
-            'query_param_name' => env('API_MODEL_RELATIONS_AUTH_QUERY_NAME', 'api_key'),
         ],
     ],
-    
-    'cache' => [
-        'enabled' => env('API_MODEL_RELATIONS_CACHE_ENABLED', true),
-        'ttl' => env('API_MODEL_RELATIONS_CACHE_TTL', 3600), // seconds
-        'store' => env('API_MODEL_RELATIONS_CACHE_STORE', 'file'),
-        'prefix' => env('API_MODEL_RELATIONS_CACHE_PREFIX', 'api_model_'),
-    ],
-    
-    'error_handling' => [
-        'log_requests' => env('API_MODEL_RELATIONS_LOG_REQUESTS', true),
-        'log_responses' => env('API_MODEL_RELATIONS_LOG_RESPONSES', true),
-        'log_channel' => env('API_MODEL_RELATIONS_LOG_CHANNEL', 'stack'),
-    ],
-    
-    'rate_limiting' => [
-        'enabled' => env('API_MODEL_RELATIONS_RATE_LIMIT_ENABLED', true),
-        'max_attempts' => env('API_MODEL_RELATIONS_RATE_LIMIT_MAX', 60),
-        'decay_minutes' => env('API_MODEL_RELATIONS_RATE_LIMIT_DECAY', 1),
-    ],
-    
-    'debug' => env('API_MODEL_RELATIONS_DEBUG', false),
     
     'events' => [
         'enabled' => env('API_MODEL_RELATIONS_EVENTS_ENABLED', true),
     ],
     
+    'debug' => env('API_MODEL_RELATIONS_DEBUG', false),
+];
+```
+
+### Hybrid Data Source Configuration (`config/hybrid-data-source.php`)
+
+```php
+return [
+    'global_mode' => env('API_MODEL_DATA_SOURCE_MODE', 'hybrid'),
     'models' => [
-        'merge_local' => env('API_MODEL_RELATIONS_MERGE_LOCAL', false),
-        'cache_ttl' => env('API_MODEL_RELATIONS_MODEL_CACHE_TTL', 3600),
+        'product' => [
+            'data_source_mode' => 'api_first',
+            'sync_enabled' => true,
+            'cache_ttl' => 3600,
+        ],
+    ],
+];
+```
+
+### High-Performance Cache Configuration (`config/high-performance-cache.php`)
+
+```php
+return [
+    'enabled' => env('HIGH_PERFORMANCE_CACHE_ENABLED', true),
+    'driver' => env('HIGH_PERFORMANCE_CACHE_DRIVER', 'redis'),
+    'redis' => [
+        'connection' => 'default',
+        'prefix' => 'api_model_hp:',
+        'serializer' => 'igbinary',
+    ],
+    'ttl' => [
+        'default' => 3600,
+        'models' => [
+            'product' => 7200,
+            'category' => 86400,
+        ],
+    ],
+];
+```
+
+### API Cache Configuration (`config/api-cache.php`)
+
+```php
+return [
+    'enabled' => env('API_CACHE_ENABLED', true),
+    'default_ttl' => env('API_CACHE_DEFAULT_TTL', 3600),
+    'store' => env('API_CACHE_STORE', 'redis'),
+    'prefix' => env('API_CACHE_PREFIX', 'api_cache:'),
+    'tags' => [
+        'enabled' => true,
+        'separator' => ':',
     ],
 ];
 ```
@@ -129,7 +163,7 @@ return [
 
 ### Creating an API Model
 
-Create a model that extends `ApiModel` and use the `SyncWithApi` trait:
+Create a model that extends `ApiModel` (which includes all necessary traits automatically):
 
 ```php
 <?php
@@ -137,18 +171,30 @@ Create a model that extends `ApiModel` and use the `SyncWithApi` trait:
 namespace App\Models\Api;
 
 use MTechStack\LaravelApiModelClient\Models\ApiModel;
-use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class Product extends ApiModel
 {
-    use SyncWithApi;
-
     /**
      * The API endpoint for this model.
      *
      * @var string
      */
     protected $apiEndpoint = 'products';
+    
+    /**
+     * The database table for hybrid data source mode (optional).
+     *
+     * @var string
+     */
+    protected $table = 'products';
+    
+    /**
+     * Data source mode for this model (optional - defaults to config).
+     * Available modes: 'api_only', 'db_only', 'hybrid', 'api_first', 'dual_sync'
+     *
+     * @var string
+     */
+    protected $dataSourceMode = 'hybrid';
     
     /**
      * The attributes that are mass assignable.
@@ -190,6 +236,31 @@ class Product extends ApiModel
         return $this->hasManyFromApi(Review::class, 'product_id');
     }
 }
+```
+
+#### Built-in Traits and Capabilities
+
+The `ApiModel` class automatically includes these powerful traits:
+
+- **`ApiModelAttributes`**: Enhanced attribute handling for API data
+- **`ApiModelCaching`**: Intelligent caching with TTL and invalidation
+- **`ApiModelErrorHandling`**: Comprehensive error handling and logging
+- **`ApiModelEvents`**: Laravel event integration for API operations
+- **`ApiModelInterfaceMethods`**: Core API interface methods
+- **`ApiModelQueries`**: Advanced query builder for API requests
+- **`HasApiRelationships`**: Full relationship support (hasMany, belongsTo, etc.)
+- **`LazyLoadsApiRelationships`**: Efficient lazy loading of relationships
+- **`HybridDataSource`**: Intelligent switching between API and database
+
+This means you get all these capabilities automatically without needing to manually add traits:
+
+```php
+// All of these work out of the box with ApiModel
+$product = Product::find(1);                    // HybridDataSource
+$products = Product::where('active', true)->get(); // ApiModelQueries
+$category = $product->category;                  // HasApiRelationships + LazyLoading
+$product->save();                               // ApiModelInterfaceMethods + Events
+// Automatic caching, error handling, and event firing
 ```
 
 ### Using API Models
@@ -667,24 +738,20 @@ $uri = $lastRequest->getUri();
 
 ## Advanced Usage
 
-### Local Database Integration
+### Hybrid Data Source Management
 
-You can integrate API models with local database records:
+The `ApiModel` class includes the `HybridDataSource` trait automatically, providing sophisticated hybrid data management between API and database:
 
 ```php
-use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
-use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
-use Illuminate\Database\Eloquent\Model;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
 
-class Product extends Model
+class Product extends ApiModel
 {
-    use SyncWithApi, HybridDataSource;
-    
     protected $apiEndpoint = 'products';
     protected $table = 'products';
     
-    // Set the data source mode
-    protected $dataSourceMode = 'hybrid'; // or 'api_first', 'dual_sync', etc.
+    // Set the data source mode (optional - defaults to config)
+    protected $dataSourceMode = 'hybrid';
 }
 
 // Usage examples for different modes:
@@ -716,18 +783,33 @@ The `HybridDataSource` trait supports five intelligent modes:
 
 #### Configuration
 
-You can configure the data source mode globally or per model:
+Configure hybrid data source modes using the dedicated configuration file:
 
 ```php
-// Global configuration in config/api-model-client.php
-'default_data_source_mode' => 'hybrid',
-
-// Model-specific configuration
-'models' => [
-    'product' => [
-        'data_source_mode' => 'api_first'
-    ]
-]
+// config/hybrid-data-source.php
+return [
+    'global_mode' => env('API_MODEL_DATA_SOURCE_MODE', 'hybrid'),
+    
+    'models' => [
+        'product' => [
+            'data_source_mode' => env('PRODUCT_DATA_SOURCE_MODE', 'api_first'),
+            'sync_enabled' => true,
+            'cache_ttl' => 3600, // 1 hour
+            'auto_sync_threshold' => 300, // 5 minutes
+        ],
+        'category' => [
+            'data_source_mode' => env('CATEGORY_DATA_SOURCE_MODE', 'hybrid'),
+            'sync_enabled' => true,
+            'conflict_resolution' => 'timestamp', // 'timestamp', 'api_wins', 'db_wins'
+        ],
+    ],
+    
+    'sync_options' => [
+        'batch_size' => 100,
+        'retry_attempts' => 3,
+        'retry_delay' => 1000, // milliseconds
+    ],
+];
 ```
 
 #### Usage Examples
@@ -746,6 +828,72 @@ $product = Product::find(1);
 $product->setDataSourceMode('dual_sync');
 $product->name = 'Updated Product';
 $product->save(); // Saves to both API and database automatically
+
+// Advanced conflict resolution in dual_sync mode
+$product = Product::find(1);
+// Automatically compares timestamps and chooses most recent data
+// Syncs both sources to maintain consistency
+```
+
+### High-Performance Caching
+
+The package includes a sophisticated multi-layer caching system with Redis support:
+
+```php
+// config/high-performance-cache.php
+return [
+    'enabled' => env('HIGH_PERFORMANCE_CACHE_ENABLED', true),
+    'driver' => env('HIGH_PERFORMANCE_CACHE_DRIVER', 'redis'),
+    
+    'redis' => [
+        'connection' => env('HIGH_PERFORMANCE_CACHE_REDIS_CONNECTION', 'default'),
+        'prefix' => env('HIGH_PERFORMANCE_CACHE_PREFIX', 'api_model_hp:'),
+        'serializer' => 'igbinary', // 'php', 'igbinary', 'json'
+    ],
+    
+    'ttl' => [
+        'default' => env('HIGH_PERFORMANCE_CACHE_TTL', 3600),
+        'models' => [
+            'product' => 7200, // 2 hours
+            'category' => 86400, // 24 hours
+        ],
+    ],
+    
+    'warming' => [
+        'enabled' => env('CACHE_WARMING_ENABLED', true),
+        'batch_size' => 100,
+        'concurrent_requests' => 5,
+    ],
+    
+    'invalidation' => [
+        'strategy' => 'tag_based', // 'tag_based', 'key_pattern', 'manual'
+        'auto_invalidate_on_update' => true,
+    ],
+];
+
+// Usage in models
+class Product extends ApiModel
+{
+    protected $cacheProfile = 'high_performance';
+    protected $cacheTags = ['products', 'catalog'];
+    protected $cacheTtl = 7200; // Override default TTL
+    
+    // Enable cache warming for this model
+    protected $enableCacheWarming = true;
+}
+
+// Advanced caching operations
+$product = Product::withCache('products:featured')
+    ->where('featured', true)
+    ->remember(3600) // Cache for 1 hour
+    ->get();
+
+// Cache warming
+Product::warmCache(['featured' => true], 100); // Warm cache for featured products
+
+// Cache invalidation
+Product::invalidateCache(['products', 'catalog']); // Invalidate by tags
+Product::find(1)->invalidateModelCache(); // Invalidate specific model cache
 ```
 
 ### Custom Response Transformers
@@ -778,10 +926,11 @@ app()->bind('api-model-relations.transformers.product', function() {
 // Use your transformer in your model
 class Product extends ApiModel
 {
-    use SyncWithApi;
-    
     protected $apiEndpoint = 'products';
     protected $responseTransformer = 'product';
+    
+    // ApiModel already includes all necessary traits automatically
+    // No need to manually add SyncWithApi or other traits
 }
 ```
 
