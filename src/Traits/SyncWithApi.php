@@ -55,7 +55,7 @@ trait SyncWithApi
      * @param array|null $attributes Optional attributes to use instead of model attributes
      * @return bool
      */
-    public function syncToApi($attributes = null)
+    public function syncToApi($attributes = null): bool
     {
         // If no attributes provided, use the model's attributes
         if ($attributes === null) {

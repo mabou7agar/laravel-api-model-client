@@ -673,34 +673,79 @@ You can integrate API models with local database records:
 
 ```php
 use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
-use MTechStack\LaravelApiModelClient\Traits\MergesWithDatabase;
+use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    use SyncWithApi, MergesWithDatabase;
+    use SyncWithApi, HybridDataSource;
     
     protected $apiEndpoint = 'products';
     protected $table = 'products';
     
-    // Specify which attributes should be stored only in the database
-    protected $dbOnly = ['local_stock', 'last_checked_at'];
-    
-    // Specify which attributes should be sent to the API
-    protected $apiOnly = ['name', 'description', 'price'];
-    
-    // Override the shouldMergeWithDatabase method to control when to merge
-    public function shouldMergeWithDatabase()
-    {
-        return true; // Always merge with database
-    }
+    // Set the data source mode
+    protected $dataSourceMode = 'hybrid'; // or 'api_first', 'dual_sync', etc.
 }
 
-// Usage
-$product = Product::find(1); // Gets from API and merges with local DB
-$product->local_stock = 10; // This will only be saved to the database
-$product->price = 149.99; // This will be saved to both API and database
-$product->save(); // Saves to both API and database in a transaction
+// Usage examples for different modes:
+
+// 1. Hybrid Mode (database first, API fallback)
+$product = Product::find(1); // Checks database first, then API
+
+// 2. API First Mode (API first, sync to database)
+$product = new Product();
+$product->dataSourceMode = 'api_first';
+$product = $product->find(1); // Checks API first, syncs to database
+
+// 3. Dual Sync Mode (keep both in sync)
+$product = new Product();
+$product->dataSourceMode = 'dual_sync';
+$product->name = 'Updated Product';
+$product->save(); // Saves to both API and database
+```
+
+#### Available Data Source Modes
+
+The `HybridDataSource` trait supports five intelligent modes:
+
+- **`api_only`**: All operations use API exclusively
+- **`db_only`**: All operations use database exclusively  
+- **`hybrid`**: Check database first, fallback to API
+- **`api_first`**: Check API first, sync to database
+- **`dual_sync`**: Keep both database and API in sync
+
+#### Configuration
+
+You can configure the data source mode globally or per model:
+
+```php
+// Global configuration in config/api-model-client.php
+'default_data_source_mode' => 'hybrid',
+
+// Model-specific configuration
+'models' => [
+    'product' => [
+        'data_source_mode' => 'api_first'
+    ]
+]
+```
+
+#### Usage Examples
+
+```php
+// Basic usage with hybrid mode
+$product = Product::find(1); // Checks database first, then API if not found
+
+// Switch modes dynamically
+$product = new Product();
+$product->setDataSourceMode('api_first');
+$allProducts = $product->all(); // Gets from API first, syncs to database
+
+// Dual sync mode - keeps both sources in sync
+$product = Product::find(1);
+$product->setDataSourceMode('dual_sync');
+$product->name = 'Updated Product';
+$product->save(); // Saves to both API and database automatically
 ```
 
 ### Custom Response Transformers
