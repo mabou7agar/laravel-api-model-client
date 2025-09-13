@@ -250,7 +250,10 @@ The `ApiModel` class automatically includes these powerful traits:
 - **`ApiModelQueries`**: Advanced query builder for API requests
 - **`HasApiRelationships`**: Full relationship support (hasMany, belongsTo, etc.)
 - **`LazyLoadsApiRelationships`**: Efficient lazy loading of relationships
+- **`SyncWithApi`**: Database synchronization methods (syncFromApi, syncToApi)
 - **`HybridDataSource`**: Intelligent switching between API and database
+
+> **⚠️ Important Note**: As of v1.0.14, the `SyncWithApi` trait is now built into `ApiModel`. You no longer need to manually add `use SyncWithApi;` to your models. The trait collision between `SyncWithApi::syncToApi` and `HybridDataSource::syncToApi` has been resolved with `HybridDataSource` taking precedence for better hybrid data source compatibility.
 
 This means you get all these capabilities automatically without needing to manually add traits:
 
@@ -260,7 +263,29 @@ $product = Product::find(1);                    // HybridDataSource
 $products = Product::where('active', true)->get(); // ApiModelQueries
 $category = $product->category;                  // HasApiRelationships + LazyLoading
 $product->save();                               // ApiModelInterfaceMethods + Events
+$product->syncFromApi();                        // SyncWithApi (now built-in)
 // Automatic caching, error handling, and event firing
+```
+
+#### Migration from Previous Versions
+
+If you're upgrading from a version prior to v1.0.14 and have models that manually include the `SyncWithApi` trait:
+
+```php
+// ❌ Old way (will cause trait collision)
+class Product extends ApiModel
+{
+    use SyncWithApi; // Remove this line
+    
+    protected $apiEndpoint = 'products';
+}
+
+// ✅ New way (v1.0.14+)
+class Product extends ApiModel
+{
+    // SyncWithApi is now included automatically
+    protected $apiEndpoint = 'products';
+}
 ```
 
 ### Using API Models
