@@ -3,11 +3,10 @@
 namespace MTechStack\LaravelApiModelClient\Examples;
 
 use MTechStack\LaravelApiModelClient\Models\ApiModel;
-use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class RemoteUser extends ApiModel
 {
-    use SyncWithApi;
+    // SyncWithApi trait is now included automatically in ApiModel
 
     /**
      * The API endpoint for this model.

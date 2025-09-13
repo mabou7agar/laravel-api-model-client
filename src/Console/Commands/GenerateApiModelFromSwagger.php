@@ -346,11 +346,10 @@ class GenerateApiModelFromSwagger extends Command
 namespace {$namespace};
 
 use MTechStack\LaravelApiModelClient\Models\ApiModel;
-use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 
 class {$modelName} extends ApiModel
 {
-    use SyncWithApi;
+    // SyncWithApi trait is now included automatically in ApiModel
 
     /**
      * The API endpoint for this model.

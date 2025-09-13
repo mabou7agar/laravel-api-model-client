@@ -12,6 +12,7 @@ use MTechStack\LaravelApiModelClient\Traits\ApiModelQueries;
 use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
+use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
@@ -26,6 +27,7 @@ class ApiModel extends Model implements ApiModelInterface
     use ApiModelQueries;
     use HasApiRelationships;
     use LazyLoadsApiRelationships;
+    use SyncWithApi;
     use HybridDataSource {
         // HybridDataSource methods take precedence over other traits
         HybridDataSource::find insteadof ApiModelQueries;
@@ -33,6 +35,7 @@ class ApiModel extends Model implements ApiModelInterface
         HybridDataSource::save insteadof ApiModelQueries, ApiModelInterfaceMethods;
         HybridDataSource::delete insteadof ApiModelQueries, ApiModelInterfaceMethods;
         HybridDataSource::create insteadof ApiModelQueries;
+        HybridDataSource::syncToApi insteadof SyncWithApi;
         
         // Resolve other method collisions
         ApiModelCaching::getCacheTtl insteadof ApiModelInterfaceMethods;
@@ -49,6 +52,7 @@ class ApiModel extends Model implements ApiModelInterface
         ApiModelInterfaceMethods::delete as deleteFromInterface;
         ApiModelInterfaceMethods::save as saveFromInterface;
         ApiModelInterfaceMethods::saveToApi as saveToApiFromTrait;
+        SyncWithApi::syncToApi as syncToApiFromSyncTrait;
     }
 
 
