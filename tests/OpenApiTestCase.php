@@ -315,11 +315,18 @@ abstract class OpenApiTestCase extends TestCase
      */
     protected function assertSchemaValid(array $schema, string $message = ''): void
     {
+        $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+        file_put_contents($tempFile, json_encode($schema));
+        
         try {
-            $this->parser->validateSchema($schema);
-            $this->assertTrue(true, $message ?: 'Schema validation should pass');
+            $result = $this->parser->parse($tempFile);
+            $this->assertIsArray($result, $message ?: 'Schema validation should pass');
         } catch (\Exception $e) {
             $this->fail($message ?: "Schema validation failed: {$e->getMessage()}");
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
         }
     }
 
@@ -328,14 +335,21 @@ abstract class OpenApiTestCase extends TestCase
      */
     protected function assertSchemaInvalid(array $schema, string $expectedError = '', string $message = ''): void
     {
+        $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+        file_put_contents($tempFile, json_encode($schema));
+        
         try {
-            $this->parser->validateSchema($schema);
+            $this->parser->parse($tempFile);
             $this->fail($message ?: 'Schema validation should fail');
         } catch (\Exception $e) {
             if ($expectedError) {
                 $this->assertStringContainsString($expectedError, $e->getMessage());
             }
             $this->assertTrue(true, $message ?: 'Schema validation correctly failed');
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
         }
     }
 
