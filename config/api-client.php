@@ -319,7 +319,7 @@ return [
         'mock_data_path' => storage_path('api-client/mocks'),
         'generate_mock_data' => env('API_CLIENT_GENERATE_MOCK_DATA', false),
         'validate_examples' => env('API_CLIENT_VALIDATE_EXAMPLES', true),
-        'debug_mode' => env('API_CLIENT_DEBUG_MODE', app()->environment('local')),
+        'debug_mode' => env('API_CLIENT_DEBUG_MODE',false),
         'profiling' => env('API_CLIENT_PROFILING', false),
         'test_coverage' => env('API_CLIENT_TEST_COVERAGE', false),
     ],
