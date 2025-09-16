@@ -142,7 +142,7 @@ class OpenApiQueryBuilderTest extends TestCase
     {
         $query = $this->testModel->newQuery();
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $query);
+        $this->assertTrue($query instanceof OpenApiQueryBuilder);
     }
 
     /** @test */
@@ -153,7 +153,7 @@ class OpenApiQueryBuilderTest extends TestCase
         // Valid parameter
         $result = $query->whereOpenApi('status', '=', 'available');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals(['status' => 'available'], $result->getApiParameters());
     }
 
@@ -194,7 +194,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->whereOpenApiMultiple($parameters);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals($parameters, $result->getApiParameters());
     }
 
@@ -211,7 +211,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->applyOpenApiFilters($filters);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         
         $apiParams = $result->getApiParameters();
         $this->assertArrayHasKey('status', $apiParams);
@@ -226,7 +226,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->orderByOpenApi('name', 'desc');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         
         $apiParams = $result->getApiParameters();
         $this->assertEquals('name', $apiParams['sort']);
@@ -252,7 +252,7 @@ class OpenApiQueryBuilderTest extends TestCase
         // Valid limit
         $result = $query->limitOpenApi(50);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals(50, $result->getApiParameters()['limit']);
     }
 
@@ -274,7 +274,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->offsetOpenApi(10);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals(10, $result->getApiParameters()['offset']);
     }
 
@@ -297,7 +297,7 @@ class OpenApiQueryBuilderTest extends TestCase
         // Test whereByStatus method
         $result = $query->whereByStatus('available');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals(['status' => 'available'], $result->getApiParameters());
     }
 
@@ -309,7 +309,7 @@ class OpenApiQueryBuilderTest extends TestCase
         // Test orderByName method
         $result = $query->orderByName('desc');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         
         $apiParams = $result->getApiParameters();
         $this->assertEquals('name', $apiParams['sort']);
@@ -333,7 +333,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         // Should work like regular query builder
         $result = $query->where('name', '=', 'Fluffy');
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
     }
 
     /** @test */
@@ -462,7 +462,7 @@ class OpenApiQueryBuilderTest extends TestCase
 
         $result = $query->withOpenApiParams($params);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertEquals('available', $apiParams['status']);
         $this->assertEquals(25, $apiParams['limit']);
@@ -495,7 +495,7 @@ class OpenApiQueryBuilderTest extends TestCase
 
         $result = $query->withOpenApiFiltering($filters);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertEquals('available', $apiParams['status']);
         $this->assertEquals('Fluffy', $apiParams['name']);
@@ -508,7 +508,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->withOpenApiSorting('name', 'desc');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertEquals('name', $apiParams['sort']);
         $this->assertEquals('desc', $apiParams['order']);
@@ -521,7 +521,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->withOpenApiPagination(2, 25);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertEquals(2, $apiParams['page']);
         $this->assertEquals(25, $apiParams['per_page']);
@@ -534,7 +534,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->withOpenApiSearch('fluffy cat');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals('fluffy cat', $result->getApiParameters()['search']);
     }
 
@@ -545,7 +545,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->whereRange('price', 10.0, 50.0);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertEquals(10.0, $apiParams['price_min']);
         $this->assertEquals(50.0, $apiParams['price_max']);
@@ -558,7 +558,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->whereIn('status', ['available', 'pending']);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertIsArray($apiParams['status']);
         $this->assertContains('available', $apiParams['status']);
@@ -572,7 +572,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->whereNotIn('status', ['sold']);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertArrayHasKey('status', $apiParams);
     }
@@ -584,7 +584,7 @@ class OpenApiQueryBuilderTest extends TestCase
         
         $result = $query->whereOperator('limit', '>=', 10);
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $apiParams = $result->getApiParameters();
         $this->assertArrayHasKey('limit', $apiParams);
     }
@@ -635,7 +635,7 @@ class OpenApiQueryBuilderTest extends TestCase
             ->withOpenApiPagination(1, 10)
             ->withOpenApiSearch('fluffy');
         
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         
         $apiParams = $result->getApiParameters();
         $this->assertEquals('available', $apiParams['status']);
@@ -729,12 +729,12 @@ class OpenApiQueryBuilderTest extends TestCase
         
         // Test scopeWithStatus dynamic method
         $result = $query->scopeWithStatus('available');
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals('available', $result->getApiParameters()['status']);
 
         // Test scopeWithLimit dynamic method
         $result = $query->scopeWithLimit(50);
-        $this->assertInstanceOf(OpenApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof OpenApiQueryBuilder);
         $this->assertEquals(50, $result->getApiParameters()['limit']);
     }
 

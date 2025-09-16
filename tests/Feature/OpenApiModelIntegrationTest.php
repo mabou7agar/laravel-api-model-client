@@ -342,7 +342,7 @@ class OpenApiModelIntegrationTest extends TestCase
         $scopedQuery = $query->withOpenApiFilters($filters);
         
         // The query should be modified (we can't easily test the actual SQL without a real DB)
-        $this->assertInstanceOf(get_class($query), $scopedQuery);
+        $this->assertTrue($scopedQuery instanceof get_class($query));
     }
 
     /** @test */
@@ -457,7 +457,7 @@ class OpenApiModelIntegrationTest extends TestCase
         
         // Test that the model can still be instantiated normally
         $instance = new (get_class($this->testModel));
-        $this->assertInstanceOf(ApiModel::class, $instance);
+        $this->assertTrue($instance instanceof ApiModel);
         
         // Test that fillable and casts can be merged with OpenAPI-generated ones
         $fillable = $this->testModel->getFillable();

@@ -36,7 +36,7 @@ class ApiQueryBuilderTest extends TestCase
         $model = new TestQueryModel();
         $queryBuilder = new ApiQueryBuilder($model);
 
-        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
+        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
     }
 
     /** @test */
@@ -47,7 +47,7 @@ class ApiQueryBuilderTest extends TestCase
         
         $result = $queryBuilder->take(5);
         
-        $this->assertInstanceOf(ApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof ApiQueryBuilder);
         $this->assertSame($queryBuilder, $result); // Should return same instance for chaining
     }
 
@@ -59,7 +59,7 @@ class ApiQueryBuilderTest extends TestCase
         
         $result = $queryBuilder->limit(10);
         
-        $this->assertInstanceOf(ApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof ApiQueryBuilder);
         $this->assertSame($queryBuilder, $result);
     }
 
@@ -71,7 +71,7 @@ class ApiQueryBuilderTest extends TestCase
         
         $result = $queryBuilder->where('status', 1);
         
-        $this->assertInstanceOf(ApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof ApiQueryBuilder);
         $this->assertSame($queryBuilder, $result);
     }
 
@@ -86,7 +86,7 @@ class ApiQueryBuilderTest extends TestCase
             ->take(5)
             ->limit(3);
         
-        $this->assertInstanceOf(ApiQueryBuilder::class, $result);
+        $this->assertTrue($result instanceof ApiQueryBuilder);
         $this->assertSame($queryBuilder, $result);
     }
 
@@ -125,9 +125,9 @@ class ApiQueryBuilderTest extends TestCase
         
         $results = $queryBuilder->getFromApi();
         
-        $this->assertInstanceOf(Collection::class, $results);
+        $this->assertTrue($results instanceof Collection);
         $this->assertCount(2, $results);
-        $this->assertInstanceOf(TestQueryModel::class, $results->first());
+        $this->assertTrue($results->first() instanceof TestQueryModel);
         $this->assertEquals(1, $results->first()->id);
         $this->assertEquals('Test Item 1', $results->first()->name);
     }
@@ -156,9 +156,9 @@ class ApiQueryBuilderTest extends TestCase
         
         $results = $queryBuilder->get();
         
-        $this->assertInstanceOf(Collection::class, $results);
+        $this->assertTrue($results instanceof Collection);
         $this->assertCount(1, $results);
-        $this->assertInstanceOf(TestQueryModel::class, $results->first());
+        $this->assertTrue($results->first() instanceof TestQueryModel);
     }
 
     /** @test */
@@ -184,9 +184,9 @@ class ApiQueryBuilderTest extends TestCase
         
         $models = $queryBuilder->createModelsFromItems($items);
         
-        $this->assertInstanceOf(Collection::class, $models);
+        $this->assertTrue($models instanceof Collection);
         $this->assertCount(2, $models);
-        $this->assertInstanceOf(TestQueryModel::class, $models->first());
+        $this->assertTrue($models->first() instanceof TestQueryModel);
         $this->assertEquals(1, $models->first()->id);
         $this->assertEquals('Test Item 1', $models->first()->name);
         $this->assertEquals(100.00, $models->first()->price);
@@ -205,7 +205,7 @@ class ApiQueryBuilderTest extends TestCase
         
         $models = $queryBuilder->createModelsFromItems([]);
         
-        $this->assertInstanceOf(Collection::class, $models);
+        $this->assertTrue($models instanceof Collection);
         $this->assertCount(0, $models);
     }
 
@@ -233,7 +233,7 @@ class ApiQueryBuilderTest extends TestCase
         
         $models = $queryBuilder->createModelsFromItems($items);
         
-        $this->assertInstanceOf(Collection::class, $models);
+        $this->assertTrue($models instanceof Collection);
         $this->assertCount(2, $models); // Should filter out the null model
         $this->assertEquals(1, $models->first()->id);
         $this->assertEquals(2, $models->last()->id);
@@ -317,7 +317,7 @@ class ApiQueryBuilderTest extends TestCase
         
         // This would typically be tested by checking the actual API call parameters
         // For now, we verify the query builder maintains its state
-        $this->assertInstanceOf(ApiQueryBuilder::class, $queryBuilder);
+        $this->assertTrue($queryBuilder instanceof ApiQueryBuilder);
     }
 
     /** @test */
