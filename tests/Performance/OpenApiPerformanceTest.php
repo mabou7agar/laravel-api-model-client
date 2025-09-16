@@ -30,11 +30,20 @@ class OpenApiPerformanceTest extends OpenApiTestCase
         ];
 
         foreach ($schemas as $size => $schema) {
-            $this->startBenchmark("parse_schema_{$size}");
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
             
-            for ($i = 0; $i < 10; $i++) {
-                $result = $this->parser->parse($schema);
-                $this->assertIsArray($result);
+            try {
+                $this->startBenchmark("parse_schema_{$size}");
+                
+                for ($i = 0; $i < 10; $i++) {
+                    $result = $this->parser->parse($tempFile);
+                    $this->assertIsArray($result);
+                }
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
             }
             
             $benchmarkResult = $this->endBenchmark("parse_schema_{$size}");
@@ -98,29 +107,37 @@ class OpenApiPerformanceTest extends OpenApiTestCase
     public function test_caching_performance(): void
     {
         $schema = $this->fixtureManager->getSchema('petstore-3.0.0');
+        $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+        file_put_contents($tempFile, json_encode($schema));
         
-        // Test without caching
-        config(['api-client.schemas.testing.caching.enabled' => false]);
+        try {
+            // Test without caching
+            config(['api-client.schemas.testing.caching.enabled' => false]);
+            
+            $this->startBenchmark('parsing_without_cache');
+            for ($i = 0; $i < 5; $i++) {
+                $this->parser->parse($tempFile);
+            }
+            $noCacheResult = $this->endBenchmark('parsing_without_cache');
         
-        $this->startBenchmark('parsing_without_cache');
-        for ($i = 0; $i < 5; $i++) {
-            $this->parser->parse($schema);
+            // Test with caching
+            config(['api-client.schemas.testing.caching.enabled' => true]);
+            
+            $this->startBenchmark('parsing_with_cache');
+            for ($i = 0; $i < 5; $i++) {
+                $this->parser->parse($tempFile);
+            }
+            $cacheResult = $this->endBenchmark('parsing_with_cache');
+            
+            // Caching should provide significant performance improvement
+            $improvementRatio = $noCacheResult['execution_time'] / $cacheResult['execution_time'];
+            $this->assertGreaterThan(1.5, $improvementRatio, 
+                'Caching should provide at least 50% performance improvement');
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
         }
-        $noCacheResult = $this->endBenchmark('parsing_without_cache');
-        
-        // Test with caching
-        config(['api-client.schemas.testing.caching.enabled' => true]);
-        
-        $this->startBenchmark('parsing_with_cache');
-        for ($i = 0; $i < 5; $i++) {
-            $this->parser->parse($schema);
-        }
-        $cacheResult = $this->endBenchmark('parsing_with_cache');
-        
-        // Caching should provide significant performance improvement
-        $improvementRatio = $noCacheResult['execution_time'] / $cacheResult['execution_time'];
-        $this->assertGreaterThan(1.5, $improvementRatio, 
-            'Caching should provide at least 50% performance improvement');
     }
 
     /**
@@ -142,13 +159,18 @@ class OpenApiPerformanceTest extends OpenApiTestCase
         // Process multiple schemas multiple times
         for ($iteration = 0; $iteration < 3; $iteration++) {
             foreach ($schemas as $name => $schema) {
-                $result = $this->parser->parse($schema);
-                $endpoints = $this->parser->extractEndpoints($schema);
-                $extractedSchemas = $this->parser->extractSchemas($schema);
+                $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+                file_put_contents($tempFile, json_encode($schema));
                 
-                // Generate validation rules for all schemas
-                foreach ($extractedSchemas as $schemaName => $schemaDefinition) {
-                    $rules = $this->parser->generateValidationRules($schemaDefinition);
+                try {
+                    $result = $this->parser->parse($tempFile);
+                    $endpoints = $this->parser->getEndpoints();
+                    $extractedSchemas = $this->parser->getSchemas();
+                    $rules = $this->parser->getValidationRules();
+                } finally {
+                    if (file_exists($tempFile)) {
+                        unlink($tempFile);
+                    }
                 }
             }
         }
@@ -192,7 +214,16 @@ class OpenApiPerformanceTest extends OpenApiTestCase
         
         // Process schemas concurrently (simulated)
         foreach ($schemas as $index => $schema) {
-            $results[$index] = $parsers[$index]->parse($schema);
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
+            
+            try {
+                $results[$index] = $parsers[$index]->parse($tempFile);
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
         }
         
         $concurrentResult = $this->endBenchmark('concurrent_processing');
@@ -210,13 +241,22 @@ class OpenApiPerformanceTest extends OpenApiTestCase
         $versionSchemas = $this->getOpenApiVersionTestCases();
         
         foreach ($versionSchemas as $version => $schema) {
-            $this->startBenchmark("parse_version_{$version}");
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
             
-            // Parse each version multiple times
-            for ($i = 0; $i < 5; $i++) {
-                $result = $this->parser->parse($schema);
-                $this->assertIsArray($result);
-                $this->assertEquals($version, $result['openapi']);
+            try {
+                $this->startBenchmark("parse_version_{$version}");
+                
+                // Parse each version multiple times
+                for ($i = 0; $i < 5; $i++) {
+                    $result = $this->parser->parse($tempFile);
+                    $this->assertIsArray($result);
+                    $this->assertEquals($version, $result['openapi']);
+                }
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
             }
             
             $versionResult = $this->endBenchmark("parse_version_{$version}");
@@ -242,11 +282,20 @@ class OpenApiPerformanceTest extends OpenApiTestCase
         $performanceResults = [];
         
         foreach ($complexityLevels as $level => $schema) {
-            $this->startBenchmark("complexity_{$level}");
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
             
-            $result = $this->parser->parse($schema);
-            $endpoints = $this->parser->extractEndpoints($schema);
-            $schemas = $this->parser->extractSchemas($schema);
+            try {
+                $this->startBenchmark("complexity_{$level}");
+                
+                $result = $this->parser->parse($tempFile);
+                $endpoints = $this->parser->getEndpoints();
+                $schemas = $this->parser->getSchemas();
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
             
             $complexityResult = $this->endBenchmark("complexity_{$level}");
             $performanceResults[$level] = $complexityResult['execution_time'];
@@ -312,11 +361,20 @@ class OpenApiPerformanceTest extends OpenApiTestCase
         
         // Take multiple performance samples
         for ($sample = 0; $sample < 10; $sample++) {
-            $this->startBenchmark("regression_sample_{$sample}");
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
             
-            $result = $this->parser->parse($schema);
-            $endpoints = $this->parser->extractEndpoints($schema);
-            $schemas = $this->parser->extractSchemas($schema);
+            try {
+                $this->startBenchmark("regression_sample_{$sample}");
+                
+                $result = $this->parser->parse($tempFile);
+                $endpoints = $this->parser->getEndpoints();
+                $schemas = $this->parser->getSchemas();
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
             
             $sampleResult = $this->endBenchmark("regression_sample_{$sample}");
             $performanceSamples[] = $sampleResult['execution_time'];
