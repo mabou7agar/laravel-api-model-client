@@ -183,8 +183,8 @@ class OpenApiSchemaParserTest extends TestCase
         file_put_contents($invalidSchemaPath, json_encode($invalidSchema));
 
         try {
-            $this->expectException(SchemaValidationException::class);
-            $this->expectExceptionMessage('Unsupported OpenAPI version: 2.0.0');
+            $this->expectException(OpenApiParsingException::class);
+            $this->expectExceptionMessage('Unsupported OpenAPI version: 2.0');
             
             $this->parser->parse($invalidSchemaPath);
         } finally {

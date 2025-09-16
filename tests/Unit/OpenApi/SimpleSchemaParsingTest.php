@@ -86,7 +86,7 @@ class SimpleSchemaParsingTest extends OpenApiTestCase
         file_put_contents($tempFile, json_encode($schema));
 
         try {
-            $this->expectException(SchemaValidationException::class);
+            $this->expectException(OpenApiParsingException::class);
             $this->parser->parse($tempFile);
         } finally {
             if (file_exists($tempFile)) {

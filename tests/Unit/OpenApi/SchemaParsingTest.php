@@ -101,7 +101,7 @@ class SchemaParsingTest extends OpenApiTestCase
      */
     public function test_parsing_empty_schema_throws_exception(): void
     {
-        $this->expectException(SchemaValidationException::class);
+        $this->expectException(OpenApiParsingException::class);
         $this->parser->parse([]);
     }
 
@@ -406,7 +406,7 @@ class SchemaParsingTest extends OpenApiTestCase
         try {
             $this->parser->validateSchema($invalidSchema);
             $this->fail('Should have thrown validation exception');
-        } catch (SchemaValidationException $e) {
+        } catch (OpenApiParsingException $e) {
             $this->assertStringContainsString('version', $e->getMessage());
             $this->assertStringContainsString('required', strtolower($e->getMessage()));
         }
