@@ -19,28 +19,31 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_openapi_version_parsing_compatibility(): void
     {
         $versionSchemas = $this->getOpenApiVersionTestCases();
-        
+
         foreach ($versionSchemas as $version => $schema) {
             $this->startBenchmark("compatibility_test_{$version}");
-            
+
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
+
             try {
-                $result = $this->parser->parse($schema);
-                
+                $result = $this->parser->parse($tempFile);
+
                 // Basic structure validation
                 $this->assertIsArray($result);
                 $this->assertArrayHasKey('openapi', $result);
                 $this->assertArrayHasKey('info', $result);
                 $this->assertArrayHasKey('paths', $result);
                 $this->assertEquals($version, $result['openapi']);
-                
+
                 // Test endpoint extraction
-                $endpoints = $this->parser->extractEndpoints($schema);
+                $endpoints = $this->parser->getEndpoints();
                 $this->assertIsArray($endpoints);
-                
+
                 // Test schema extraction
-                $schemas = $this->parser->extractSchemas($schema);
+                $schemas = $this->parser->getSchemas();
                 $this->assertIsArray($schemas);
-                
+
                 $this->assertTrue(true, "OpenAPI {$version} parsing successful");
                 
             } catch (\Exception $e) {
@@ -49,8 +52,12 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                 } else {
                     $this->markTestSkipped("OpenAPI version {$version} is not supported");
                 }
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
             }
-            
+
             $this->endBenchmark("compatibility_test_{$version}");
         }
     }
@@ -61,15 +68,23 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_openapi_30_features(): void
     {
         $schema30 = $this->fixtureManager->getSchema('petstore-3.0.0');
-        
-        $this->startBenchmark('openapi_30_features');
-        
-        $result = $this->parser->parse($schema30);
-        
+        $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+        file_put_contents($tempFile, json_encode($schema30));
+
+        try {
+            $this->startBenchmark('openapi_30_features');
+
+            $result = $this->parser->parse($tempFile);
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+
         // Test 3.0.x specific features
         $this->assertArrayHasKey('components', $result);
         $this->assertArrayHasKey('schemas', $result['components']);
-        
+
         // Test security schemes (3.0.x format)
         if (isset($result['components']['securitySchemes'])) {
             foreach ($result['components']['securitySchemes'] as $schemeName => $scheme) {
@@ -77,7 +92,7 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                 $this->assertContains($scheme['type'], ['http', 'apiKey', 'oauth2', 'openIdConnect']);
             }
         }
-        
+
         // Test parameter serialization (3.0.x style)
         $endpoints = $this->parser->extractEndpoints($schema30);
         foreach ($endpoints as $endpoint) {
@@ -89,7 +104,7 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                 }
             }
         }
-        
+
         $this->endBenchmark('openapi_30_features');
     }
 
@@ -99,16 +114,24 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_openapi_31_features(): void
     {
         $schema31 = $this->fixtureManager->getSchema('petstore-3.1.0');
-        
-        $this->startBenchmark('openapi_31_features');
-        
-        $result = $this->parser->parse($schema31);
-        
-        // Test 3.1.x specific features
-        $this->assertEquals('3.1.0', $result['openapi']);
-        
-        // Test JSON Schema compatibility (3.1.x feature)
-        $schemas = $this->parser->extractSchemas($schema31);
+        $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+        file_put_contents($tempFile, json_encode($schema31));
+
+        try {
+            $this->startBenchmark('openapi_31_features');
+
+            $result = $this->parser->parse($tempFile);
+
+            // Test 3.1.x specific features
+            $this->assertEquals('3.1.0', $result['openapi']);
+
+            // Test JSON Schema compatibility (3.1.x feature)
+            $schemas = $this->parser->getSchemas();
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
         foreach ($schemas as $schemaName => $schemaDefinition) {
             // 3.1.x allows more JSON Schema keywords
             if (isset($schemaDefinition['properties'])) {
@@ -123,7 +146,7 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                 }
             }
         }
-        
+
         $this->endBenchmark('openapi_31_features');
     }
 
@@ -134,28 +157,35 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     {
         $olderVersions = ['3.0.0', '3.0.1', '3.0.2'];
         $newerVersions = ['3.0.3', '3.1.0'];
-        
+
         foreach ($olderVersions as $oldVersion) {
             $oldSchema = $this->fixtureManager->getSchema("petstore-{$oldVersion}");
-            
-            $this->startBenchmark("backward_compatibility_{$oldVersion}");
-            
-            // Parse older version
-            $oldResult = $this->parser->parse($oldSchema);
-            $oldEndpoints = $this->parser->extractEndpoints($oldSchema);
-            $oldSchemas = $this->parser->extractSchemas($oldSchema);
-            
-            // Ensure basic functionality works
-            $this->assertIsArray($oldResult);
-            $this->assertNotEmpty($oldEndpoints);
-            $this->assertNotEmpty($oldSchemas);
-            
-            // Generate validation rules should work for all versions
-            foreach ($oldSchemas as $schemaName => $schemaDefinition) {
-                $rules = $this->parser->generateValidationRules($schemaDefinition);
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($oldSchema));
+
+            try {
+                $this->startBenchmark("backward_compatibility_{$oldVersion}");
+
+                // Parse older version
+                $oldResult = $this->parser->parse($tempFile);
+                $oldEndpoints = $this->parser->getEndpoints();
+                $oldSchemas = $this->parser->getSchemas();
+
+                // Ensure basic functionality works
+                $this->assertIsArray($oldResult);
+                $this->assertNotEmpty($oldEndpoints);
+                $this->assertNotEmpty($oldSchemas);
+
+                // Generate validation rules should work for all versions
+                $rules = $this->parser->getValidationRules();
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
                 $this->assertIsArray($rules);
             }
-            
+
             $this->endBenchmark("backward_compatibility_{$oldVersion}");
         }
     }
@@ -167,25 +197,33 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     {
         // Test that newer features don't break older functionality
         $schema31 = $this->fixtureManager->getSchema('petstore-3.1.0');
-        
-        $this->startBenchmark('forward_compatibility');
-        
-        // Parse newer version with potentially unknown features
-        $result = $this->parser->parse($schema31);
-        
-        // Basic functionality should still work
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('info', $result);
-        $this->assertArrayHasKey('paths', $result);
-        
-        // Endpoint extraction should work
-        $endpoints = $this->parser->extractEndpoints($schema31);
+        $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+        file_put_contents($tempFile, json_encode($schema31));
+
+        try {
+            $this->startBenchmark('forward_compatibility');
+
+            // Parse newer version with potentially unknown features
+            $result = $this->parser->parse($tempFile);
+
+            // Basic functionality should still work
+            $this->assertIsArray($result);
+            $this->assertArrayHasKey('info', $result);
+            $this->assertArrayHasKey('paths', $result);
+
+            // Endpoint extraction should work
+            $endpoints = $this->parser->getEndpoints();
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
         $this->assertIsArray($endpoints);
-        
+
         // Schema extraction should work
-        $schemas = $this->parser->extractSchemas($schema31);
+        $schemas = $this->parser->getSchemas();
         $this->assertIsArray($schemas);
-        
+
         $this->endBenchmark('forward_compatibility');
     }
 
@@ -195,18 +233,37 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_version_specific_validation_rules(): void
     {
         $versionSchemas = $this->getOpenApiVersionTestCases();
-        
+
         foreach ($versionSchemas as $version => $schema) {
             $this->startBenchmark("validation_rules_{$version}");
-            
-            $schemas = $this->parser->extractSchemas($schema);
-            
-            foreach ($schemas as $schemaName => $schemaDefinition) {
-                $rules = $this->parser->generateValidationRules($schemaDefinition);
-                
+
+            $tempFile = tempnam(sys_get_temp_dir(), 'openapi_test_');
+            file_put_contents($tempFile, json_encode($schema));
+
+            try {
+                $this->parser->parse($tempFile);
+                $schemas = $this->parser->getSchemas();
+                $rules = $this->parser->getValidationRules();
+            } finally {
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
+
+            // Validation rules should be generated for all versions
+            $this->assertIsArray($rules);
+
+            // Test that rules are Laravel-compatible
+            foreach ($rules as $field => $fieldRules) {
+                $this->assertIsArray($fieldRules);
+                foreach ($fieldRules as $rule) {
+                    $this->assertIsString($rule);
+                }
+            }
+
                 // Validation rules should be generated for all versions
                 $this->assertIsArray($rules);
-                
+
                 // Test that rules are Laravel-compatible
                 foreach ($rules as $field => $fieldRules) {
                     $this->assertIsArray($fieldRules);
@@ -215,7 +272,7 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                     }
                 }
             }
-            
+
             $this->endBenchmark("validation_rules_{$version}");
         }
     }
@@ -227,27 +284,27 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     {
         $schema30 = $this->fixtureManager->getSchema('petstore-3.0.0');
         $schema31 = $this->fixtureManager->getSchema('petstore-3.1.0');
-        
+
         $this->startBenchmark('cross_version_migration');
-        
+
         // Parse both versions
         $result30 = $this->parser->parse($schema30);
         $result31 = $this->parser->parse($schema31);
-        
+
         // Extract comparable components
         $endpoints30 = $this->parser->extractEndpoints($schema30);
         $endpoints31 = $this->parser->extractEndpoints($schema31);
-        
+
         $schemas30 = $this->parser->extractSchemas($schema30);
         $schemas31 = $this->parser->extractSchemas($schema31);
-        
+
         // Basic structure should be similar
         $this->assertSameSize($endpoints30, $endpoints31);
         $this->assertSameSize($schemas30, $schemas31);
-        
+
         // Schema names should match
         $this->assertEquals(array_keys($schemas30), array_keys($schemas31));
-        
+
         $this->endBenchmark('cross_version_migration');
     }
 
@@ -257,14 +314,14 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_unsupported_version_handling(): void
     {
         $unsupportedVersions = ['2.0', '1.2', '4.0.0'];
-        
+
         foreach ($unsupportedVersions as $version) {
             $invalidSchema = [
                 'openapi' => $version,
                 'info' => ['title' => 'Test', 'version' => '1.0.0'],
                 'paths' => []
             ];
-            
+
             try {
                 $this->parser->parse($invalidSchema);
                 $this->fail("Should have thrown exception for unsupported version {$version}");
@@ -281,16 +338,16 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_version_detection_accuracy(): void
     {
         $versionSchemas = $this->getOpenApiVersionTestCases();
-        
+
         foreach ($versionSchemas as $expectedVersion => $schema) {
             $this->startBenchmark("version_detection_{$expectedVersion}");
-            
+
             $result = $this->parser->parse($schema);
             $detectedVersion = $result['openapi'];
-            
-            $this->assertEquals($expectedVersion, $detectedVersion, 
+
+            $this->assertEquals($expectedVersion, $detectedVersion,
                 "Version detection should be accurate for {$expectedVersion}");
-            
+
             $this->endBenchmark("version_detection_{$expectedVersion}");
         }
     }
@@ -312,12 +369,12 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
             'callbacks' => false, // Not implemented yet
             'links' => false,     // Not implemented yet
         ];
-        
+
         $versionSchemas = $this->getOpenApiVersionTestCases();
-        
+
         foreach ($versionSchemas as $version => $schema) {
             $this->startBenchmark("feature_matrix_{$version}");
-            
+
             foreach ($features as $feature => $shouldSupport) {
                 try {
                     switch ($feature) {
@@ -325,17 +382,17 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                             $result = $this->parser->parse($schema);
                             $this->assertIsArray($result);
                             break;
-                            
+
                         case 'endpoint_extraction':
                             $endpoints = $this->parser->extractEndpoints($schema);
                             $this->assertIsArray($endpoints);
                             break;
-                            
+
                         case 'schema_extraction':
                             $schemas = $this->parser->extractSchemas($schema);
                             $this->assertIsArray($schemas);
                             break;
-                            
+
                         case 'validation_rules':
                             $schemas = $this->parser->extractSchemas($schema);
                             foreach ($schemas as $schemaDefinition) {
@@ -345,11 +402,11 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                             }
                             break;
                     }
-                    
+
                     if ($shouldSupport) {
                         $this->assertTrue(true, "Feature {$feature} should be supported in {$version}");
                     }
-                    
+
                 } catch (\Exception $e) {
                     if ($shouldSupport) {
                         $this->fail("Feature {$feature} should be supported in {$version}: " . $e->getMessage());
@@ -358,7 +415,7 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                     }
                 }
             }
-            
+
             $this->endBenchmark("feature_matrix_{$version}");
         }
     }
@@ -370,37 +427,37 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     {
         $versionSchemas = $this->getOpenApiVersionTestCases();
         $performanceResults = [];
-        
+
         foreach ($versionSchemas as $version => $schema) {
             $this->startBenchmark("performance_consistency_{$version}");
-            
+
             // Perform standard operations
             for ($i = 0; $i < 5; $i++) {
                 $result = $this->parser->parse($schema);
                 $endpoints = $this->parser->extractEndpoints($schema);
                 $schemas = $this->parser->extractSchemas($schema);
             }
-            
+
             $benchmarkResult = $this->endBenchmark("performance_consistency_{$version}");
             $performanceResults[$version] = $benchmarkResult['execution_time'];
         }
-        
+
         // Performance should be relatively consistent across versions
         $averageTime = array_sum($performanceResults) / count($performanceResults);
         $maxTime = max($performanceResults);
         $minTime = min($performanceResults);
-        
+
         // No version should be more than 3x slower than the fastest
-        $this->assertLessThan($minTime * 3, $maxTime, 
+        $this->assertLessThan($minTime * 3, $maxTime,
             'Performance should be consistent across OpenAPI versions');
-        
+
         // Standard deviation should be reasonable
         $variance = array_sum(array_map(function($time) use ($averageTime) {
             return pow($time - $averageTime, 2);
         }, $performanceResults)) / count($performanceResults);
         $standardDeviation = sqrt($variance);
-        
-        $this->assertLessThan($averageTime * 0.5, $standardDeviation, 
+
+        $this->assertLessThan($averageTime * 0.5, $standardDeviation,
             'Performance variance across versions should be low');
     }
 
@@ -410,12 +467,12 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_error_message_consistency(): void
     {
         $versionSchemas = $this->getOpenApiVersionTestCases();
-        
+
         foreach ($versionSchemas as $version => $schema) {
             // Create invalid version of schema
             $invalidSchema = $schema;
             unset($invalidSchema['info']['version']); // Remove required field
-            
+
             try {
                 $this->parser->parse($invalidSchema);
                 $this->fail("Should have thrown exception for invalid schema in version {$version}");
@@ -433,20 +490,20 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
     public function test_schema_validation_strictness(): void
     {
         $versionSchemas = $this->getOpenApiVersionTestCases();
-        
+
         foreach ($versionSchemas as $version => $schema) {
             $this->startBenchmark("validation_strictness_{$version}");
-            
+
             // Test that valid schemas pass validation
             $this->assertSchemaValid($schema, "Valid {$version} schema should pass validation");
-            
+
             // Test that invalid schemas fail validation
             $invalidSchema = $schema;
             $invalidSchema['paths'] = 'invalid_paths_value'; // Should be object
-            
-            $this->assertSchemaInvalid($invalidSchema, 'paths', 
+
+            $this->assertSchemaInvalid($invalidSchema, 'paths',
                 "Invalid {$version} schema should fail validation");
-            
+
             $this->endBenchmark("validation_strictness_{$version}");
         }
     }
