@@ -2,9 +2,8 @@
 
 namespace MTechStack\LaravelApiModelClient\Query;
 
-use MTechStack\LaravelApiModelClient\Contracts\ApiModelInterface;
-use MTechStack\LaravelApiModelClient\Models\ApiModel;
-use MTechStack\LaravelApiModelClient\Query\ApiPaginator;
+use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
+use MTechStack\LaravelApiModelClient\Services\ApiClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
@@ -61,7 +60,7 @@ class ApiQueryBuilder
      * @param \MTechStack\LaravelApiModelClient\Models\ApiModel $model
      * @return void
      */
-    public function __construct(ApiModel $model)
+    public function __construct($model)
     {
         $this->model = $model;
     }
@@ -260,11 +259,11 @@ class ApiQueryBuilder
         if (in_array('MTechStack\LaravelApiModelClient\Traits\HasApiCache', class_uses($this->model))) {
             return $this->getWithPolymorphicCache();
         }
-        
+
         // Fall back to original caching system
         return $this->getWithOriginalCache();
     }
-    
+
     /**
      * Get results using polymorphic cache system with pagination support.
      *
@@ -275,27 +274,27 @@ class ApiQueryBuilder
         $queryParams = $this->buildQueryParams();
         $instance = new (get_class($this->model))();
         $strategy = $instance->getCacheStrategy();
-        
+
         switch ($strategy) {
             case 'cache_only':
                 return $this->getFromCacheWithPagination($queryParams);
-                
+
             case 'api_only':
                 return $this->getFromApiWithPagination($queryParams);
-                
+
             case 'hybrid':
             default:
                 // For paginated requests, prefer API to ensure accurate pagination
                 if (!empty($queryParams['limit']) || !empty($queryParams['offset'])) {
                     return $this->getFromApiWithPagination($queryParams);
                 }
-                
+
                 // For non-paginated requests, try cache first
                 $cached = $this->getFromCacheWithPagination($queryParams);
                 return $cached->isNotEmpty() ? $cached : $this->getFromApiWithPagination($queryParams);
         }
     }
-    
+
     /**
      * Get results from cache with pagination applied.
      *
@@ -308,7 +307,7 @@ class ApiQueryBuilder
         $apiCacheClass = app()->bound('ApiCache') ? app('ApiCache') : '\MTechStack\LaravelApiModelClient\Models\ApiCache';
         $cacheQuery = $apiCacheClass::forType($instance->getCacheableType())
                                 ->fresh($instance->getCacheTtl());
-        
+
         // Apply pagination to cache query
         if (isset($queryParams['limit']) && $queryParams['limit'] > 0) {
             $cacheQuery->limit($queryParams['limit']);
@@ -316,14 +315,14 @@ class ApiQueryBuilder
         if (isset($queryParams['offset']) && $queryParams['offset'] > 0) {
             $cacheQuery->offset($queryParams['offset']);
         }
-        
+
         $cacheEntries = $cacheQuery->get();
-        
+
         return $cacheEntries->map(function ($cache) use ($instance) {
             return $instance->newFromApiResponse($cache->api_data);
         });
     }
-    
+
     /**
      * Get results from API with pagination and cache them.
      *
@@ -336,17 +335,17 @@ class ApiQueryBuilder
             // Make API request with pagination parameters
             $endpoint = $this->model->getApiEndpoint();
             $response = $this->getApiClient()->get($endpoint, $queryParams);
-            
+
             // Process API response
             $items = $this->processApiResponse($response);
-            
+
             // Cache the individual items for future use
             foreach ($items as $item) {
                 if (isset($item->id) && is_array($item->getAttributes())) {
                     $item->cacheApiData($item->getAttributes());
                 }
             }
-            
+
             return $items;
         } catch (\Exception $e) {
             // Log the error if configured to do so
@@ -357,11 +356,11 @@ class ApiQueryBuilder
                     'exception' => $e->getMessage(),
                 ]);
             }
-            
+
             return new Collection();
         }
     }
-    
+
     /**
      * Get results using original cache system (fallback).
      *
@@ -371,7 +370,7 @@ class ApiQueryBuilder
     {
         $cacheKey = $this->getCacheKey();
         $cacheTtl = $this->model->getCacheTtl();
-        
+
         // Check if we have a cached response
         if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
             $cachedData = Cache::get($cacheKey);
@@ -379,20 +378,20 @@ class ApiQueryBuilder
                 return $this->processApiResponse($cachedData);
             }
         }
-        
+
         try {
             // Build the query parameters
             $queryParams = $this->buildQueryParams();
-            
+
             // Make API request
             $endpoint = $this->model->getApiEndpoint();
             $response = $this->getApiClient()->get($endpoint, $queryParams);
-            
+
             // Cache the response if caching is enabled
             if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
                 Cache::put($cacheKey, $response, $cacheTtl);
             }
-            
+
             return $this->processApiResponse($response);
         } catch (\Exception $e) {
             // Log the error if configured to do so
@@ -403,7 +402,7 @@ class ApiQueryBuilder
                     'exception' => $e->getMessage(),
                 ]);
             }
-            
+
             // Return empty collection
             return new Collection();
         }
@@ -429,20 +428,20 @@ class ApiQueryBuilder
     {
         // Extract items from the response
         $items = $this->extractItemsFromResponse($response);
-        
+
         // Create a collection of models using reflection to bypass __call interference
         $models = [];
-        
+
         foreach ($items as $item) {
             if (empty($item)) {
                 continue;
             }
-            
+
             try {
                 // Create a fresh instance of the model class
                 $modelClass = get_class($this->model);
                 $newModel = new $modelClass();
-                
+
                 // Use reflection to call newFromApiResponse directly, bypassing all __call interference
                 $reflection = new \ReflectionClass($newModel);
                 if ($reflection->hasMethod('newFromApiResponse')) {
@@ -452,13 +451,13 @@ class ApiQueryBuilder
                         $models[] = $model;
                     }
                 }
-                
+
             } catch (\Exception $e) {
                 // Log error but continue processing
                 error_log("Failed to create model from API response: " . $e->getMessage());
             }
         }
-        
+
         return new Collection($models);
     }
 
@@ -473,17 +472,17 @@ class ApiQueryBuilder
     {
         // Create a collection of models using reflection to bypass __call interference
         $models = [];
-        
+
         foreach ($items as $item) {
             if (empty($item)) {
                 continue;
             }
-            
+
             try {
                 // Create a fresh instance of the model class
                 $modelClass = get_class($this->model);
                 $newModel = new $modelClass();
-                
+
                 // Use reflection to call newFromApiResponse directly, bypassing all __call interference
                 $reflection = new \ReflectionClass($newModel);
                 if ($reflection->hasMethod('newFromApiResponse')) {
@@ -493,13 +492,13 @@ class ApiQueryBuilder
                         $models[] = $model;
                     }
                 }
-                
+
             } catch (\Exception $e) {
                 // Log error but continue processing
                 error_log("Failed to create model from API response: " . $e->getMessage());
             }
         }
-        
+
         return new Collection($models);
     }
 
@@ -515,16 +514,16 @@ class ApiQueryBuilder
         if (isset($response[0])) {
             return $response;
         }
-        
+
         // Check for common wrapper keys
         $possibleKeys = ['data', 'items', 'results', 'records', 'content'];
-        
+
         foreach ($possibleKeys as $key) {
             if (isset($response[$key]) && is_array($response[$key])) {
                 return $response[$key];
             }
         }
-        
+
         // If we can't find a collection, return an empty array
         return [];
     }
@@ -537,31 +536,31 @@ class ApiQueryBuilder
     protected function buildQueryParams()
     {
         $params = [];
-        
+
         // Add where constraints
         foreach ($this->wheres as $where) {
             $this->addWhereToParams($params, $where);
         }
-        
+
         // Add ordering
         if (!empty($this->orders)) {
             $this->addOrderingToParams($params);
         }
-        
+
         // Add pagination
         if ($this->limit !== null) {
             $params['limit'] = $this->limit;
         }
-        
+
         if ($this->offset !== null) {
             $params['offset'] = $this->offset;
         }
-        
+
         // Add columns to select
         if ($this->columns !== ['*']) {
             $params['fields'] = implode(',', $this->columns);
         }
-        
+
         return $params;
     }
 
@@ -577,7 +576,7 @@ class ApiQueryBuilder
         $column = $where['column'];
         $operator = $where['operator'];
         $value = $where['value'];
-        
+
         // Handle different operators
         switch ($operator) {
             case '=':
@@ -602,12 +601,12 @@ class ApiQueryBuilder
     protected function addOrderingToParams(&$params)
     {
         $orders = [];
-        
+
         foreach ($this->orders as $order) {
             $direction = $order['direction'] === 'asc' ? '' : '-';
             $orders[] = $direction . $order['column'];
         }
-        
+
         $params['sort'] = implode(',', $orders);
     }
 
@@ -621,18 +620,115 @@ class ApiQueryBuilder
         $prefix = config('api-model-relations.cache.prefix', 'api_model_');
         $class = str_replace('\\', '_', get_class($this->model));
         $queryString = md5(json_encode($this->buildQueryParams()));
-        
+
         return $prefix . $class . '_query_' . $queryString;
     }
 
     /**
-     * Get the API client instance.
+     * Get the API client instance with robust fallback mechanisms.
      *
      * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
+     * @throws \RuntimeException
      */
     protected function getApiClient()
     {
-        return App::make('api-client');
+        // Strategy 1: Try to get the API client from the service container
+        try {
+            if (App::bound('api-client')) {
+                return App::make('api-client');
+            }
+        } catch (\Exception $e) {
+            // Continue to next strategy
+        }
+
+        // Strategy 2: Try the interface binding
+        try {
+            if (App::bound(ApiClientInterface::class)) {
+                return App::make(ApiClientInterface::class);
+            }
+        } catch (\Exception $e) {
+            // Continue to next strategy
+        }
+
+        // Strategy 3: Check if the model has its own API client method
+        if (method_exists($this->model, 'getApiClient')) {
+            try {
+                $client = $this->model->getApiClient();
+                if ($client instanceof ApiClientInterface) {
+                    return $client;
+                }
+            } catch (\Exception $e) {
+                // Continue to next strategy
+            }
+        }
+
+        // Strategy 4: Create a default API client instance
+        try {
+            if (class_exists(ApiClient::class)) {
+                $config = $this->getApiClientConfig();
+                return new ApiClient($config);
+            }
+        } catch (\Exception $e) {
+            // Continue to error handling
+        }
+
+        // If all strategies fail, provide helpful error message
+        throw new \RuntimeException(
+            "Unable to resolve API client. This usually means:\n" .
+            "1. Laravel package auto-discovery is disabled\n" .
+            "2. The package was not properly installed via Composer\n" .
+            "3. Laravel application context is not available\n\n" .
+            "To fix this:\n" .
+            "- Ensure the package was installed via: composer require m-tech-stack/laravel-api-model-client\n" .
+            "- Check that Laravel package auto-discovery is enabled (default)\n" .
+            "- If auto-discovery is disabled, manually add the provider to config/app.php:\n" .
+            "  MTechStack\\LaravelApiModelClient\\ApiModelRelationsServiceProvider::class\n" .
+            "- Run: php artisan vendor:publish --provider=\"MTechStack\\LaravelApiModelClient\\ApiModelRelationsServiceProvider\"\n" .
+            "- Ensure your .env has proper API configuration\n\n" .
+            "For more help, see: https://github.com/mabou7agar/laravel-api-model-client#installation"
+        );
+    }
+
+    /**
+     * Get API client configuration with sensible defaults.
+     *
+     * @return array
+     */
+    protected function getApiClientConfig(): array
+    {
+        // Try to get configuration from Laravel config
+        if (function_exists('config')) {
+            $config = config('api-model-client', []);
+            if (!empty($config)) {
+                return $config;
+            }
+        }
+
+        // Fallback to basic configuration
+        return [
+            'client' => [
+                'base_url' => env('API_CLIENT_BASE_URL', ''),
+                'timeout' => env('API_CLIENT_TIMEOUT', 30),
+                'retry_attempts' => env('API_CLIENT_RETRY_ATTEMPTS', 3),
+            ],
+            'auth' => [
+                'strategy' => env('API_CLIENT_AUTH_STRATEGY', null),
+                'credentials' => [
+                    'token' => env('API_CLIENT_TOKEN', null),
+                    'api_key' => env('API_CLIENT_API_KEY', null),
+                    'username' => env('API_CLIENT_USERNAME', null),
+                    'password' => env('API_CLIENT_PASSWORD', null),
+                ],
+            ],
+            'cache' => [
+                'enabled' => env('API_CLIENT_CACHE_ENABLED', true),
+                'ttl' => env('API_CLIENT_CACHE_TTL', 3600),
+            ],
+            'error_handling' => [
+                'log_errors' => env('API_CLIENT_LOG_ERRORS', true),
+                'throw_exceptions' => env('API_CLIENT_THROW_EXCEPTIONS', true),
+            ],
+        ];
     }
 
     /**
@@ -667,16 +763,16 @@ class ApiQueryBuilder
     public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null)
     {
         $page = $page ?: request()->input($pageName, 1);
-        
+
         // Set the columns to be selected
         $this->select($columns);
-        
+
         // Set the pagination parameters
         $this->forPage($page, $perPage);
-        
+
         $cacheKey = $this->getCacheKey();
         $cacheTtl = $this->model->getCacheTtl();
-        
+
         // Check if we have a cached response
         if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
             $cachedData = Cache::get($cacheKey);
@@ -693,20 +789,20 @@ class ApiQueryBuilder
                 );
             }
         }
-        
+
         try {
             // Build the query parameters
             $queryParams = $this->buildQueryParams();
-            
+
             // Make API request
             $endpoint = $this->model->getApiEndpoint();
             $response = $this->getApiClient()->get($endpoint, $queryParams);
-            
+
             // Cache the response if caching is enabled
             if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
                 Cache::put($cacheKey, $response, $cacheTtl);
             }
-            
+
             return ApiPaginator::fromApiResponse(
                 $this->model,
                 $response,
@@ -726,7 +822,7 @@ class ApiQueryBuilder
                     'exception' => $e->getMessage(),
                 ]);
             }
-            
+
             // Return empty paginator
             return new ApiPaginator(
                 new Collection(),
@@ -755,5 +851,338 @@ class ApiQueryBuilder
     {
         // For simplicity, we'll just use the regular paginate method
         return $this->paginate($perPage, $columns, $pageName, $page);
+    }
+
+    /**
+     * Handle dynamic method calls into the method.
+     *
+     * @param string $method
+     * @param array $parameters
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        // Check if this is a scope method call
+        if ($this->hasScopeMethod($method)) {
+            return $this->callScope($method, $parameters);
+        }
+
+        // Check for macros
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
+        }
+
+        // If method doesn't exist, throw an exception
+        throw new \BadMethodCallException(sprintf(
+            'Call to undefined method %s::%s()',
+            static::class,
+            $method
+        ));
+    }
+
+    /**
+     * Check if the model has a scope method for the given method name.
+     *
+     * @param string $method
+     * @return bool
+     */
+    protected function hasScopeMethod($method)
+    {
+        $scopeMethod = 'scope' . ucfirst($method);
+        return method_exists($this->model, $scopeMethod);
+    }
+
+    /**
+     * Call a scope method on the model.
+     *
+     * @param string $method
+     * @param array $parameters
+     * @return $this
+     */
+    protected function callScope($method, $parameters)
+    {
+        $scopeMethod = 'scope' . ucfirst($method);
+
+        // Create a fresh instance of the model to call the scope method
+        $modelInstance = new (get_class($this->model))();
+
+        // Call the scope method with this query builder as the first parameter
+        array_unshift($parameters, $this);
+
+        $result = call_user_func_array([$modelInstance, $scopeMethod], $parameters);
+
+        // Scope methods should return the query builder instance
+        return $result instanceof static ? $result : $this;
+    }
+
+    /**
+     * Find a model by its primary key or throw an exception.
+     *
+     * @param  mixed  $id
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Model
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function findOrFail($id, $columns = ['*'])
+    {
+        $result = $this->model->find($id, $columns);
+
+        if (is_null($result)) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException(
+                'No query results for model [' . get_class($this->model) . '] ' . $id
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Find multiple models by their primary keys.
+     *
+     * @param  \Illuminate\Contracts\Support\Arrayable|array  $ids
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function findMany($ids, $columns = ['*'])
+    {
+        if ($ids instanceof \Illuminate\Contracts\Support\Arrayable) {
+            $ids = $ids->toArray();
+        }
+
+        $results = new \Illuminate\Database\Eloquent\Collection();
+
+        foreach ($ids as $id) {
+            $model = $this->model->find($id, $columns);
+            if ($model) {
+                $results->push($model);
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Execute the query and get the first result or throw an exception.
+     *
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Model
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function firstOrFail($columns = ['*'])
+    {
+        $result = $this->first();
+
+        if (is_null($result)) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException(
+                'No query results for model [' . get_class($this->model) . ']'
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Execute the query and get the first result or call a callback.
+     *
+     * @param  \Closure|array  $columns
+     * @param  \Closure|null  $callback
+     * @return \Illuminate\Database\Eloquent\Model|mixed
+     */
+    public function firstOr($columns = ['*'], $callback = null)
+    {
+        if ($columns instanceof \Closure) {
+            $callback = $columns;
+            $columns = ['*'];
+        }
+
+        $result = $this->first();
+
+        if (is_null($result)) {
+            return $callback ? $callback() : null;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get a single column's value from the first result of a query.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public function value($column)
+    {
+        $result = $this->first();
+        return $result ? $result->{$column} : null;
+    }
+
+    /**
+     * Get an array with the values of a given column.
+     *
+     * @param  string  $column
+     * @param  string|null  $key
+     * @return \Illuminate\Support\Collection
+     */
+    public function pluck($column, $key = null)
+    {
+        $results = $this->get();
+
+        if ($key) {
+            return $results->pluck($column, $key);
+        }
+
+        return $results->pluck($column);
+    }
+
+    /**
+     * Retrieve the "count" result of the query.
+     *
+     * @param  string  $columns
+     * @return int
+     */
+    public function count($columns = '*')
+    {
+        // For API queries, we'll get all results and count them
+        // In a real implementation, you might want to use a dedicated count endpoint
+        return $this->get()->count();
+    }
+
+    /**
+     * Retrieve the minimum value of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public function min($column)
+    {
+        $results = $this->get();
+        return $results->min($column);
+    }
+
+    /**
+     * Retrieve the maximum value of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public function max($column)
+    {
+        $results = $this->get();
+        return $results->max($column);
+    }
+
+    /**
+     * Retrieve the sum of the values of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public function sum($column)
+    {
+        $results = $this->get();
+        return $results->sum($column);
+    }
+
+    /**
+     * Retrieve the average of the values of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public function avg($column)
+    {
+        $results = $this->get();
+        return $results->avg($column);
+    }
+
+    /**
+     * Alias for the "avg" method.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public function average($column)
+    {
+        return $this->avg($column);
+    }
+
+    /**
+     * Determine if any rows exist for the current query.
+     *
+     * @return bool
+     */
+    public function exists()
+    {
+        return $this->count() > 0;
+    }
+
+    /**
+     * Determine if no rows exist for the current query.
+     *
+     * @return bool
+     */
+    public function doesntExist()
+    {
+        return !$this->exists();
+    }
+
+    /**
+     * Create or update a record matching the attributes, and fill it with values.
+     *
+     * @param  array  $attributes
+     * @param  array  $values
+     * @return \Illuminate\Database\Eloquent\Model
+     */
+    public function updateOrCreate(array $attributes, array $values = [])
+    {
+        $instance = $this->firstOrNew($attributes);
+        $instance->fill($values);
+        $instance->save();
+
+        return $instance;
+    }
+
+    /**
+     * Get the first record matching the attributes or instantiate it.
+     *
+     * @param  array  $attributes
+     * @param  array  $values
+     * @return \Illuminate\Database\Eloquent\Model
+     */
+    public function firstOrNew(array $attributes = [], array $values = [])
+    {
+        // Apply where clauses for attributes
+        $query = clone $this;
+        foreach ($attributes as $key => $value) {
+            $query->where($key, $value);
+        }
+
+        $instance = $query->first();
+
+        if (is_null($instance)) {
+            $instance = $this->model->newInstance(array_merge($attributes, $values));
+        }
+
+        return $instance;
+    }
+
+    /**
+     * Get the first record matching the attributes or create it.
+     *
+     * @param  array  $attributes
+     * @param  array  $values
+     * @return \Illuminate\Database\Eloquent\Model
+     */
+    public function firstOrCreate(array $attributes, array $values = [])
+    {
+        $instance = $this->firstOrNew($attributes, $values);
+
+        if (!$instance->exists) {
+            $instance->save();
+        }
+
+        return $instance;
     }
 }

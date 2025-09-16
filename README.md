@@ -1,85 +1,571 @@
-# Laravel API Model Client
+# Laravel API Model Client with OpenAPI Integration
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/m-tech-stack/laravel-api-model-client.svg)](https://packagist.org/packages/m-tech-stack/laravel-api-model-client)
 [![Total Downloads](https://img.shields.io/packagist/dt/m-tech-stack/laravel-api-model-client.svg)](https://packagist.org/packages/m-tech-stack/laravel-api-model-client)
 [![License](https://img.shields.io/packagist/l/m-tech-stack/laravel-api-model-client.svg)](https://packagist.org/packages/m-tech-stack/laravel-api-model-client)
-[![Laravel Version](https://img.shields.io/badge/Laravel-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20%7C%2012.x-orange.svg)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/Laravel-10.x%20%7C%2011.x%20%7C%2012.x-orange.svg)](https://laravel.com)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0%2B-blue.svg)](https://swagger.io/specification/)
+[![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-purple.svg)](https://php.net)
 
-A powerful Laravel package that enables Eloquent-like models to interact seamlessly with external APIs instead of a local database, including relationships, caching, error handling, and more.
+A powerful Laravel package that enables Eloquent-like models to interact seamlessly with external APIs using **OpenAPI specifications**. Build robust API integrations with automatic model generation, schema validation, intelligent caching, and comprehensive relationship support.
+
+> 🎉 **NEW**: Complete OpenAPI 3.0+ integration with automatic model generation, schema validation, and dynamic query building!
 
 ## Table of Contents
 
-- [Features](#features)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Basic Usage](#basic-usage)
-  - [Creating an API Model](#creating-an-api-model)
-  - [Using API Models](#using-api-models)
-  - [API Model Lifecycle](#api-model-lifecycle)
-- [API Relationships](#api-relationships)
-  - [Available Relationships](#available-relationships)
-  - [Defining Relationships](#defining-relationships)
-  - [Working with Relationships](#working-with-relationships)
-- [Query Builder](#query-builder)
-- [Caching](#caching)
-- [Authentication](#authentication)
-- [Events](#events)
-- [Middleware Pipeline](#middleware-pipeline)
-- [Error Handling](#error-handling)
-- [Advanced Usage](#advanced-usage)
-  - [Hybrid Data Source Management](#hybrid-data-source-management)
-  - [Custom Response Transformers](#custom-response-transformers)
-  - [High-Performance Caching](#high-performance-caching)
-  - [API Mocking](#api-mocking)
-  - [Performance Optimization](#performance-optimization)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+- [🚀 Features](#-features)
+- [📦 Installation](#-installation)
+- [⚡ Quick Start](#-quick-start)
+- [📖 OpenAPI Integration](#-openapi-integration)
+  - [Automatic Model Generation](#automatic-model-generation)
+  - [Schema Validation](#schema-validation)
+  - [Dynamic Query Building](#dynamic-query-building)
+  - [Multi-Schema Support](#multi-schema-support)
+- [🏗️ Basic Usage](#️-basic-usage)
+- [🔗 API Relationships](#-api-relationships)
+- [🔍 Query Builder](#-query-builder)
+- [⚡ Caching](#-caching)
+- [🔐 Authentication](#-authentication)
+- [🛠️ Artisan Commands](#️-artisan-commands)
+- [🧪 Testing](#-testing)
+- [📚 Documentation](#-documentation)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
 
-## Features
+## 🚀 Features
 
-### 🚀 **Core Capabilities**
+### 🎯 **OpenAPI Integration (NEW)**
+- **🔄 Automatic Model Generation**: Generate Laravel models directly from OpenAPI 3.0+ specifications
+- **✅ Schema Validation**: Validate API requests/responses against OpenAPI schemas with configurable strictness
+- **🔍 Dynamic Query Building**: Build queries with automatic OpenAPI parameter validation and transformation
+- **🔗 Relationship Detection**: Automatic relationship mapping from OpenAPI `$ref` references
+- **📊 Multi-Schema Support**: Handle multiple API versions and schemas simultaneously
+- **⚡ Performance Optimization**: Schema caching, lazy loading, and intelligent query optimization
+
+### 🏗️ **Core Capabilities**
 - **Eloquent-like API Models**: Work with external APIs using familiar Eloquent syntax with full Laravel integration
-- **Hybrid Data Source Management**: Intelligent switching between database and API with 5 sophisticated modes (`api_only`, `db_only`, `hybrid`, `api_first`, `dual_sync`)
-- **Advanced Multi-Layer Caching**: High-performance caching system with Redis support, API cache, and configurable TTL
-- **Comprehensive Query Builder**: Chainable query methods with advanced filtering, sorting, pagination, and relationship loading
-- **Full API Relationships**: Complete relationship support (`hasMany`, `belongsTo`, `morphTo`, `hasManyThrough`, etc.) with lazy loading
+- **Hybrid Data Source Management**: Intelligent switching between database and API with 5 sophisticated modes
+- **Advanced Multi-Layer Caching**: High-performance caching system with Redis support and configurable TTL
+- **Comprehensive Query Builder**: Chainable query methods with advanced filtering, sorting, and pagination
+- **Full API Relationships**: Complete relationship support with lazy loading and eager loading optimization
 
 ### 🔧 **Advanced Features**
-- **Multi-Authentication Support**: Bearer tokens, Basic auth, API keys, and custom authentication strategies
-- **Robust Error Handling**: Comprehensive exception handling with retry logic, fallback mechanisms, and detailed logging
+- **Multi-Authentication Support**: Bearer tokens, Basic auth, API keys, OAuth2, and custom authentication strategies
+- **Robust Error Handling**: Circuit breaker pattern, retry logic, fallback mechanisms, and detailed logging
 - **Event-Driven Architecture**: Laravel event integration with custom API model events and lifecycle hooks
-- **Extensible Middleware Pipeline**: Built-in middleware for authentication, rate limiting, caching, logging, transformation, and validation
+- **Extensible Middleware Pipeline**: Built-in middleware for authentication, rate limiting, caching, and validation
 - **Powerful Response Transformers**: Transform API responses with custom transformer classes and data mapping
-- **Intelligent Database Synchronization**: Seamless sync between API and local database with conflict resolution and timestamp comparison
+- **Intelligent Database Synchronization**: Seamless sync between API and local database with conflict resolution
 
 ### 🎯 **Enterprise Features**
-- **High-Performance Caching**: Redis-based caching with intelligent cache warming, invalidation, and distributed caching support
-- **Lazy Relationship Loading**: Efficient relationship loading with automatic API calls and batch loading optimization
-- **Batch Operations**: Bulk create, update, and delete operations with transaction support
-- **Comprehensive Testing Support**: Testing utilities, mock factories, and API response mocking
-- **Console Commands**: Artisan commands for cache management, API operations, and debugging
-- **Developer Tools**: Generate models from OpenAPI/Swagger specs, debug API calls, and auto-generate documentation
+- **High-Performance Caching**: Redis-based caching with intelligent cache warming and distributed support
+- **Testing Framework**: Comprehensive testing utilities, mock factories, and API response mocking
+- **Console Commands**: Rich set of Artisan commands for schema validation, model generation, and debugging
+- **Developer Tools**: OpenAPI schema parsing, model generation, and comprehensive documentation
+- **Migration Tools**: Seamless migration from manual to OpenAPI-driven configuration
+- **Monitoring & Debugging**: Performance monitoring, health checks, and detailed error reporting
 
-## Installation
+## 📦 Installation
 
-You can install the package via composer:
+### Requirements
+
+- PHP 8.1 or higher
+- Laravel 10.0 or higher
+- OpenAPI 3.0+ specification (for OpenAPI features)
+
+### Install via Composer
 
 ```bash
+# Install the main package
 composer require m-tech-stack/laravel-api-model-client
+
+# Install OpenAPI dependency for schema parsing
+composer require cebe/php-openapi
 ```
 
-After installing, publish the configuration file:
+### Publish Configuration
 
 ```bash
-php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\MTechStack\LaravelApiModelClientServiceProvider" --tag="config"
+# Publish all configuration files
+php artisan vendor:publish --provider="MTechStack\LaravelApiModelClient\ServiceProvider"
+
+# Or publish specific configurations
+php artisan vendor:publish --tag="api-client-config"
+php artisan vendor:publish --tag="api-client-examples"
 ```
 
-## Configuration
+### Environment Setup
+
+```bash
+# Copy example environment variables
+cp .env.api-client.example .env.local
+
+# Add to your .env file
+API_CLIENT_PRIMARY_SCHEMA=https://api.example.com/openapi.json
+API_CLIENT_PRIMARY_BASE_URL=https://api.example.com
+API_CLIENT_PRIMARY_TOKEN=your-api-token
+```
+
+## ⚡ Quick Start
+
+### 1. Basic Configuration
+
+```php
+// config/api-client.php
+return [
+    'schemas' => [
+        'primary' => [
+            'source' => env('API_CLIENT_PRIMARY_SCHEMA'),
+            'base_url' => env('API_CLIENT_PRIMARY_BASE_URL'),
+            'authentication' => [
+                'type' => 'bearer',
+                'token' => env('API_CLIENT_PRIMARY_TOKEN'),
+            ],
+            'validation' => [
+                'enabled' => true,
+                'strictness' => 'moderate', // strict, moderate, lenient
+            ],
+            'caching' => [
+                'enabled' => true,
+                'ttl' => 3600,
+            ],
+        ],
+    ],
+];
+```
+
+### 2. Create Your First Model
+
+```php
+<?php
+
+namespace App\Models\Api;
+
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+use MTechStack\LaravelApiModelClient\Traits\HasOpenApiSchema;
+
+class Product extends ApiModel
+{
+    use HasOpenApiSchema;
+    
+    protected string $openApiSchemaSource = 'primary';
+    protected string $endpoint = '/products';
+    
+    protected $fillable = [
+        'name', 'description', 'price', 'category_id'
+    ];
+    
+    // Relationships are automatically detected from OpenAPI schema
+    public function category()
+    {
+        return $this->belongsToFromApi(Category::class, 'category_id');
+    }
+}
+```
+
+### 3. Use the Model
+
+```php
+// Query with OpenAPI validation
+$products = Product::whereOpenApi('status', 'active')
+    ->whereOpenApi('price', '>', 10.00)
+    ->orderByOpenApi('created_at', 'desc')
+    ->limitOpenApi(20)
+    ->get();
+
+// Create with automatic validation
+$product = Product::create([
+    'name' => 'New Product',
+    'price' => 29.99,
+    'status' => 'active',
+]);
+
+// Access relationships
+$category = $product->category;
+```
+
+### 4. Validate Your Setup
+
+```bash
+# Validate schema and configuration
+php artisan api-client:validate-schema
+
+# Test API connectivity
+php artisan api-client:test-connection
+
+# Generate models from schema
+php artisan api-client:generate-models
+```
+
+## 📖 OpenAPI Integration
+
+### Automatic Model Generation
+
+Generate Laravel models directly from your OpenAPI specification:
+
+```bash
+# Generate all models from primary schema
+php artisan api-client:generate-models
+
+# Generate from specific schema
+php artisan api-client:generate-models --schema=ecommerce
+
+# Generate with custom namespace
+php artisan api-client:generate-models --namespace=App\Models\Ecommerce
+```
+
+### Schema Validation
+
+Validate API requests and responses against your OpenAPI schema:
+
+```php
+class Product extends ApiModel
+{
+    use HasOpenApiSchema;
+    
+    // Validation is automatic based on OpenAPI schema
+    protected array $validationConfig = [
+        'strictness' => 'moderate', // strict, moderate, lenient
+        'validate_requests' => true,
+        'validate_responses' => true,
+        'fail_on_validation_error' => true,
+    ];
+}
+```
+
+### Dynamic Query Building
+
+Build queries with automatic parameter validation:
+
+```php
+// These methods validate parameters against OpenAPI schema
+$products = Product::whereOpenApi('category_id', 1)
+    ->whereOpenApi('price', 'between', [10, 100])
+    ->whereOpenApi('tags', 'contains', 'electronics')
+    ->orderByOpenApi('popularity', 'desc')
+    ->paginateOpenApi(20);
+
+// Custom query parameters from OpenAPI spec
+$products = Product::withOpenApiParams([
+    'include' => 'category,reviews',
+    'fields' => 'id,name,price',
+    'filter[status]' => 'active',
+])->get();
+```
+
+### Multi-Schema Support
+
+Handle multiple APIs and versions:
+
+```php
+// config/api-client.php
+'schemas' => [
+    'ecommerce_v1' => [
+        'source' => 'https://api.shop.com/v1/openapi.json',
+        'base_url' => 'https://api.shop.com/v1',
+    ],
+    'ecommerce_v2' => [
+        'source' => 'https://api.shop.com/v2/openapi.json',
+        'base_url' => 'https://api.shop.com/v2',
+    ],
+    'payment' => [
+        'source' => storage_path('schemas/stripe-openapi.json'),
+        'base_url' => 'https://api.stripe.com',
+    ],
+];
+
+// Use different schemas in models
+class ProductV1 extends ApiModel
+{
+    use HasOpenApiSchema;
+    protected string $openApiSchemaSource = 'ecommerce_v1';
+}
+
+class ProductV2 extends ApiModel
+{
+    use HasOpenApiSchema;
+    protected string $openApiSchemaSource = 'ecommerce_v2';
+}
+```
+
+## 🛠️ Artisan Commands
+
+The package provides a comprehensive set of Artisan commands for managing OpenAPI schemas, models, and testing:
+
+### Schema Management
+
+```bash
+# Validate OpenAPI schema and configuration
+php artisan api-client:validate-schema
+php artisan api-client:validate-schema primary --health-check
+php artisan api-client:validate-schema --detailed --format=json
+
+# Test API connectivity and authentication
+php artisan api-client:test-connection
+php artisan api-client:test-connection primary --timeout=30
+php artisan api-client:test-connection --all-schemas
+
+# Parse and analyze OpenAPI schemas
+php artisan api-client:parse-openapi schema.json
+php artisan api-client:parse-openapi --output=parsed-schema.json
+```
+
+### Model Generation
+
+```bash
+# Generate models from OpenAPI schema
+php artisan api-client:generate-models
+php artisan api-client:generate-models --schema=ecommerce
+php artisan api-client:generate-models --namespace=App\\Models\\Api
+php artisan api-client:generate-models --output-dir=app/Models/Generated
+
+# Generate specific models
+php artisan api-client:generate-models --models=Product,Category,Order
+php artisan api-client:generate-models --force --backup
+```
+
+### Cache Management
+
+```bash
+# Manage schema and response caches
+php artisan api-client:cache clear
+php artisan api-client:cache warm
+php artisan api-client:cache status
+php artisan api-client:cache clear --tags=products,categories
+
+# Performance optimization
+php artisan api-client:cache optimize
+php artisan api-client:cache benchmark
+```
+
+### Testing and Debugging
+
+```bash
+# Comprehensive testing suite with enhanced capabilities
+php artisan api-client:test
+
+# Schema-specific testing
+php artisan api-client:test --schema=primary
+php artisan api-client:test --schema=ecommerce --verbose
+
+# Model and endpoint filtering
+php artisan api-client:test --models=Product,Category,Order
+php artisan api-client:test --endpoints=/products,/categories
+php artisan api-client:test --models=Product --endpoints=/products
+
+# Performance and load testing
+php artisan api-client:test --performance --iterations=100
+php artisan api-client:test --load-test --concurrent=10 --iterations=50
+php artisan api-client:test --performance --load-test --verbose
+
+# Coverage analysis
+php artisan api-client:test --coverage
+php artisan api-client:test --coverage --models=Product,Category
+php artisan api-client:test --schema=primary --coverage --verbose
+
+# Output formatting and saving
+php artisan api-client:test --format=json
+php artisan api-client:test --format=yaml --output=test-results.yaml
+php artisan api-client:test --format=html --output=test-report.html
+
+# Advanced testing options
+php artisan api-client:test --timeout=60 --fail-fast
+php artisan api-client:test --dry-run --verbose
+php artisan api-client:test --performance --concurrent=5 --iterations=200
+
+# Complete test suite example
+php artisan api-client:test \
+    --schema=ecommerce \
+    --models=Product,Category,Order \
+    --performance \
+    --coverage \
+    --format=html \
+    --output=comprehensive-test-report.html \
+    --verbose
+```
+
+#### Test Command Features
+
+The enhanced `api-client:test` command provides comprehensive testing capabilities:
+
+**🔍 Configuration & Schema Testing**
+- Validates configuration files and settings
+- Tests OpenAPI schema accessibility and validity
+- Checks schema version compatibility
+- Validates authentication configuration
+
+**🌐 Connectivity Testing**
+- Tests API endpoint connectivity
+- Measures response times
+- Validates authentication headers
+- Checks SSL/TLS configuration
+
+**🏗️ Model Testing**
+- Tests model instantiation and configuration
+- Validates model-to-schema mapping
+- Tests query builder functionality
+- Checks relationship definitions
+- Validates OpenAPI integration
+
+**🎯 Endpoint Testing**
+- Tests individual API endpoints
+- Validates request/response formats
+- Measures endpoint performance
+- Checks authentication requirements
+
+**⚡ Performance Testing**
+- Benchmarks API response times
+- Tests concurrent request handling
+- Measures memory usage
+- Calculates requests per second
+- Provides percentile analysis (P95, P99)
+
+**🚀 Load Testing**
+- Simulates concurrent users
+- Tests system under load
+- Measures peak performance
+- Analyzes concurrent user performance
+- Provides RPS over time analysis
+
+**📊 Coverage Analysis**
+- Analyzes schema definition coverage
+- Measures endpoint test coverage
+- Evaluates model implementation coverage
+- Validates validation rule coverage
+- Provides overall coverage metrics
+
+**📄 Reporting & Output**
+- Multiple output formats (table, JSON, YAML, HTML)
+- Detailed verbose reporting
+- Save results to files
+- Comprehensive HTML reports
+- Performance metrics and charts
+
+# Debug API requests and responses
+php artisan api-client:debug
+php artisan api-client:debug --endpoint=/products
+php artisan api-client:debug --model=Product --method=create
+```
+
+### Configuration Management
+
+```bash
+# Publish and manage configurations
+php artisan api-client:publish-config
+php artisan api-client:publish-config --examples
+php artisan api-client:publish-config --force
+
+# Environment setup
+php artisan api-client:setup
+php artisan api-client:setup --interactive
+```
+
+## 🧪 Testing
+
+### Built-in Testing Framework
+
+The package includes a comprehensive testing framework with utilities for mocking API responses and testing OpenAPI integration:
+
+```php
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use App\Models\Api\Product;
+use MTechStack\LaravelApiModelClient\Testing\MocksApiResponses;
+
+class ProductApiTest extends TestCase
+{
+    use MocksApiResponses;
+
+    /** @test */
+    public function it_can_create_product_with_openapi_validation()
+    {
+        // Mock API response
+        $this->mockApiResponse('POST', '/products', [
+            'id' => 1,
+            'name' => 'Test Product',
+            'price' => 29.99,
+            'status' => 'active',
+        ]);
+
+        // Test with OpenAPI validation
+        $product = Product::create([
+            'name' => 'Test Product',
+            'price' => 29.99,
+            'status' => 'active',
+        ]);
+
+        $this->assertInstanceOf(Product::class, $product);
+        $this->assertEquals('Test Product', $product->name);
+    }
+
+    /** @test */
+    public function it_validates_against_openapi_schema()
+    {
+        $this->expectException(ValidationException::class);
+
+        // This should fail OpenAPI validation
+        Product::create([
+            'name' => '', // Required field
+            'price' => -10, // Invalid price
+        ]);
+    }
+}
+```
+
+### Performance Testing
+
+```php
+/** @test */
+public function it_performs_efficiently_with_large_datasets()
+{
+    $startTime = microtime(true);
+    $startMemory = memory_get_usage();
+
+    // Test bulk operations
+    $products = Product::whereOpenApi('status', 'active')
+        ->limitOpenApi(1000)
+        ->get();
+
+    $endTime = microtime(true);
+    $endMemory = memory_get_usage();
+
+    $this->assertLessThan(2.0, $endTime - $startTime);
+    $this->assertLessThan(50 * 1024 * 1024, $endMemory - $startMemory);
+}
+```
+
+## 📚 Documentation
+
+### Comprehensive Guides
+
+- **[OpenAPI Integration Guide](docs/OPENAPI-INTEGRATION-GUIDE.md)** - Complete guide to OpenAPI features
+- **[Migration Guide](docs/MIGRATION-GUIDE.md)** - Migrate from manual to OpenAPI configuration
+- **[Best Practices](docs/BEST-PRACTICES.md)** - Performance, security, and optimization
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[E-commerce Examples](docs/examples/ECOMMERCE-EXAMPLES.md)** - Real-world implementations
+
+### API Reference
+
+- **[Model Methods](docs/api/models.md)** - Complete API model method reference
+- **[Query Builder](docs/api/query-builder.md)** - OpenAPI query builder methods
+- **[Validation](docs/api/validation.md)** - Schema validation options
+- **[Caching](docs/api/caching.md)** - Caching strategies and configuration
+
+### Examples and Tutorials
+
+- **[Quick Start Tutorial](docs/tutorials/quick-start.md)** - Get started in 5 minutes
+- **[E-commerce Integration](docs/tutorials/ecommerce.md)** - Build an e-commerce API client
+- **[Multi-tenant SaaS](docs/tutorials/saas.md)** - Handle multiple API versions
+- **[Performance Optimization](docs/tutorials/performance.md)** - Optimize for scale
+
+## 🏗️ Configuration
 
 The package uses multiple configuration files for different aspects:
 
-### Main Configuration (`config/api_model.php`)
+### Main Configuration (`config/api-client.php`)
 
 ```php
 return [

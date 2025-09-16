@@ -4,6 +4,13 @@ namespace MTechStack\LaravelApiModelClient;
 
 use MTechStack\LaravelApiModelClient\Console\Commands\GenerateApiModelDocumentation;
 use MTechStack\LaravelApiModelClient\Console\Commands\GenerateApiModelFromSwagger;
+use MTechStack\LaravelApiModelClient\Console\Commands\GenerateModelsCommand;
+use MTechStack\LaravelApiModelClient\Console\Commands\ValidateSchemaCommand;
+use MTechStack\LaravelApiModelClient\Console\Commands\CacheManagementCommand;
+use MTechStack\LaravelApiModelClient\Console\Commands\PublishConfigCommand;
+use MTechStack\LaravelApiModelClient\Console\Commands\ParseOpenApiCommand;
+use MTechStack\LaravelApiModelClient\Console\Commands\TestCommand;
+use MTechStack\LaravelApiModelClient\OpenApi\OpenApiSchemaParser;
 use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
 use MTechStack\LaravelApiModelClient\Macros\ApiModelMacros;
 use MTechStack\LaravelApiModelClient\Services\ApiClient;
@@ -44,6 +51,11 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
             __DIR__ . '/../config/hybrid-data-source.php' => config_path('hybrid-data-source.php'),
         ], 'hybrid-data-source-config');
 
+        // Publish OpenAPI configuration
+        $this->publishes([
+            __DIR__ . '/../config/openapi.php' => config_path('openapi.php'),
+        ], 'openapi-config');
+
         // Publish API cache migration
         $this->publishes([
             __DIR__ . '/../database/migrations/2024_01_01_000000_create_api_cache_table.php' => database_path('migrations/2024_01_01_000000_create_api_cache_table.php'),
@@ -54,6 +66,12 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
             $this->commands([
                 GenerateApiModelFromSwagger::class,
                 GenerateApiModelDocumentation::class,
+                GenerateModelsCommand::class,
+                ValidateSchemaCommand::class,
+                CacheManagementCommand::class,
+                PublishConfigCommand::class,
+                ParseOpenApiCommand::class,
+                TestCommand::class,
             ]);
         }
         
@@ -86,6 +104,11 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
         // Merge hybrid data source configuration
         $this->mergeConfigFrom(
             __DIR__ . '/../config/hybrid-data-source.php', 'hybrid-data-source'
+        );
+
+        // Merge OpenAPI configuration
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/openapi.php', 'openapi'
         );
 
         // Register ApiCache model
@@ -145,6 +168,17 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
             }
             
             return $pipeline;
+        });
+
+        // Register OpenAPI Schema Parser
+        $this->app->singleton('openapi-parser', function ($app) {
+            $config = $app['config']['openapi'] ?? [];
+            return new OpenApiSchemaParser($config);
+        });
+
+        // Bind OpenApiSchemaParser to the singleton
+        $this->app->bind(OpenApiSchemaParser::class, function ($app) {
+            return $app->make('openapi-parser');
         });
     }
     

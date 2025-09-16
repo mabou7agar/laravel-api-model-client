@@ -4,6 +4,7 @@ namespace MTechStack\LaravelApiModelClient\Traits;
 
 use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Arr;
 
 /**
  * Trait for handling API model queries
@@ -428,5 +429,359 @@ trait ApiModelQueries
     public static function where($column, $operator = null, $value = null)
     {
         return (new static)->newApiQuery()->where($column, $operator, $value);
+    }
+
+    /**
+     * Execute the query and get the first result.
+     *
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Model|static|null
+     */
+    public static function first($columns = ['*'])
+    {
+        return (new static)->newApiQuery()->first($columns);
+    }
+
+    /**
+     * Execute the query as a "select" statement.
+     *
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function get($columns = ['*'])
+    {
+        return (new static)->newApiQuery()->get($columns);
+    }
+
+    /**
+     * Paginate the given query.
+     *
+     * @param  int|null  $perPage
+     * @param  array  $columns
+     * @param  string  $pageName
+     * @param  int|null  $page
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public static function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
+    {
+        return (new static)->newApiQuery()->paginate($perPage, $columns, $pageName, $page);
+    }
+
+    /**
+     * Get a paginator only supporting simple next and previous links.
+     *
+     * @param  int|null  $perPage
+     * @param  array  $columns
+     * @param  string  $pageName
+     * @param  int|null  $page
+     * @return \Illuminate\Contracts\Pagination\Paginator
+     */
+    public static function simplePaginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
+    {
+        return (new static)->newApiQuery()->simplePaginate($perPage, $columns, $pageName, $page);
+    }
+
+    /**
+     * Find a model by its primary key or throw an exception.
+     *
+     * @param  mixed  $id
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Model|static
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public static function findOrFail($id, $columns = ['*'])
+    {
+        return (new static)->newApiQuery()->findOrFail($id, $columns);
+    }
+
+    /**
+     * Find multiple models by their primary keys.
+     *
+     * @param  \Illuminate\Contracts\Support\Arrayable|array  $ids
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function findMany($ids, $columns = ['*'])
+    {
+        return (new static)->newApiQuery()->findMany($ids, $columns);
+    }
+
+    /**
+     * Execute the query and get the first result or throw an exception.
+     *
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Model|static
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public static function firstOrFail($columns = ['*'])
+    {
+        return (new static)->newApiQuery()->firstOrFail($columns);
+    }
+
+    /**
+     * Execute the query and get the first result or call a callback.
+     *
+     * @param  \Closure|array  $columns
+     * @param  \Closure|null  $callback
+     * @return \Illuminate\Database\Eloquent\Model|static|mixed
+     */
+    public static function firstOr($columns = ['*'], $callback = null)
+    {
+        return (new static)->newApiQuery()->firstOr($columns, $callback);
+    }
+
+    /**
+     * Get a single column's value from the first result of a query.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public static function value($column)
+    {
+        return (new static)->newApiQuery()->value($column);
+    }
+
+    /**
+     * Get an array with the values of a given column.
+     *
+     * @param  string  $column
+     * @param  string|null  $key
+     * @return \Illuminate\Support\Collection
+     */
+    public static function pluck($column, $key = null)
+    {
+        return (new static)->newApiQuery()->pluck($column, $key);
+    }
+
+    /**
+     * Retrieve the "count" result of the query.
+     *
+     * @param  string  $columns
+     * @return int
+     */
+    public static function count($columns = '*')
+    {
+        return (new static)->newApiQuery()->count($columns);
+    }
+
+    /**
+     * Retrieve the minimum value of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public static function min($column)
+    {
+        return (new static)->newApiQuery()->min($column);
+    }
+
+    /**
+     * Retrieve the maximum value of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public static function max($column)
+    {
+        return (new static)->newApiQuery()->max($column);
+    }
+
+    /**
+     * Retrieve the sum of the values of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public static function sum($column)
+    {
+        return (new static)->newApiQuery()->sum($column);
+    }
+
+    /**
+     * Retrieve the average of the values of a given column.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public static function avg($column)
+    {
+        return (new static)->newApiQuery()->avg($column);
+    }
+
+    /**
+     * Alias for the "avg" method.
+     *
+     * @param  string  $column
+     * @return mixed
+     */
+    public static function average($column)
+    {
+        return static::avg($column);
+    }
+
+    /**
+     * Determine if any rows exist for the current query.
+     *
+     * @return bool
+     */
+    public static function exists()
+    {
+        return (new static)->newApiQuery()->exists();
+    }
+
+    /**
+     * Determine if no rows exist for the current query.
+     *
+     * @return bool
+     */
+    public static function doesntExist()
+    {
+        return (new static)->newApiQuery()->doesntExist();
+    }
+
+    /**
+     * Create a new instance of the model.
+     *
+     * @param  array  $attributes
+     * @param  array  $options
+     * @return static
+     */
+    public static function create(array $attributes = [], array $options = [])
+    {
+        $instance = new static($attributes);
+        $instance->save($options);
+        return $instance;
+    }
+
+    /**
+     * Create or update a record matching the attributes, and fill it with values.
+     *
+     * @param  array  $attributes
+     * @param  array  $values
+     * @return static
+     */
+    public static function updateOrCreate(array $attributes, array $values = [])
+    {
+        return (new static)->newApiQuery()->updateOrCreate($attributes, $values);
+    }
+
+    /**
+     * Get the first record matching the attributes or instantiate it.
+     *
+     * @param  array  $attributes
+     * @param  array  $values
+     * @return static
+     */
+    public static function firstOrNew(array $attributes = [], array $values = [])
+    {
+        return (new static)->newApiQuery()->firstOrNew($attributes, $values);
+    }
+
+    /**
+     * Get the first record matching the attributes or create it.
+     *
+     * @param  array  $attributes
+     * @param  array  $values
+     * @return static
+     */
+    public static function firstOrCreate(array $attributes, array $values = [])
+    {
+        return (new static)->newApiQuery()->firstOrCreate($attributes, $values);
+    }
+
+    /**
+     * Update the model in the database.
+     *
+     * @param  array  $attributes
+     * @param  array  $options
+     * @return bool
+     */
+    public function update(array $attributes = [], array $options = [])
+    {
+        if (!$this->exists) {
+            return false;
+        }
+
+        return $this->fill($attributes)->save($options);
+    }
+
+    /**
+     * Reload a fresh model instance from the database.
+     *
+     * @param  array  $with
+     * @return static|null
+     */
+    public function fresh($with = [])
+    {
+        if (!$this->exists) {
+            return null;
+        }
+
+        $model = static::find($this->getKey());
+
+        if ($model && !empty($with)) {
+            $model->load($with);
+        }
+
+        return $model;
+    }
+
+    /**
+     * Reload the current model instance with fresh attributes from the database.
+     *
+     * @return $this
+     */
+    public function refresh()
+    {
+        if (!$this->exists) {
+            return $this;
+        }
+
+        $fresh = $this->fresh();
+
+        if ($fresh) {
+            $this->setRawAttributes($fresh->getAttributes(), true);
+            $this->syncOriginal();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Clone the model into a new, non-existing instance.
+     *
+     * @param  array|null  $except
+     * @return static
+     */
+    public function replicate(array $except = null)
+    {
+        $defaults = [
+            $this->getKeyName(),
+            $this->getCreatedAtColumn(),
+            $this->getUpdatedAtColumn(),
+        ];
+
+        $attributes = Arr::except(
+            $this->getAttributes(),
+            $except ? array_unique(array_merge($except, $defaults)) : $defaults
+        );
+
+        return tap(new static, function ($instance) use ($attributes) {
+            $instance->setRawAttributes($attributes);
+        });
+    }
+
+    /**
+     * Handle dynamic static method calls into the method.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public static function __callStatic($method, $parameters)
+    {
+        return (new static)->$method(...$parameters);
     }
 }

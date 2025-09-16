@@ -13,6 +13,7 @@ use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
 use MTechStack\LaravelApiModelClient\Traits\SyncWithApi;
+use MTechStack\LaravelApiModelClient\Traits\HasOpenApiSchema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
@@ -28,6 +29,7 @@ class ApiModel extends Model implements ApiModelInterface
     use HasApiRelationships;
     use LazyLoadsApiRelationships;
     use SyncWithApi;
+    use HasOpenApiSchema;
     use HybridDataSource {
         // HybridDataSource methods take precedence over other traits
         HybridDataSource::find insteadof ApiModelQueries;
@@ -39,19 +41,27 @@ class ApiModel extends Model implements ApiModelInterface
         
         // Resolve other method collisions
         ApiModelCaching::getCacheTtl insteadof ApiModelInterfaceMethods;
+        ApiModelQueries::update insteadof ApiModelInterfaceMethods;
         
         // CRITICAL FIX: Ensure LazyLoadsApiRelationships __call doesn't interfere with newFromApiResponse
         LazyLoadsApiRelationships::__call as lazyLoadsCall;
+        
+        // Resolve OpenAPI trait method collisions
+        HasOpenApiSchema::getApiEndpoint insteadof ApiModelInterfaceMethods;
+        HasOpenApiSchema::__call as openApiCall;
         
         // Create aliases for overridden methods
         ApiModelQueries::find as findFromQueries;
         ApiModelQueries::all as allFromQueries;
         ApiModelQueries::save as saveFromQueries;
         ApiModelQueries::delete as deleteFromQueries;
+        ApiModelQueries::update as updateFromQueries;
         ApiModelInterfaceMethods::getCacheTtl as getInterfaceCacheTtl;
         ApiModelInterfaceMethods::delete as deleteFromInterface;
         ApiModelInterfaceMethods::save as saveFromInterface;
+        ApiModelInterfaceMethods::update as updateFromInterface;
         ApiModelInterfaceMethods::saveToApi as saveToApiFromTrait;
+        ApiModelInterfaceMethods::getApiEndpoint as getApiEndpointFromInterface;
         SyncWithApi::syncToApi as syncToApiFromSyncTrait;
     }
 
@@ -147,14 +157,43 @@ class ApiModel extends Model implements ApiModelInterface
     }
 
     /**
+     * Enhanced __call method that handles OpenAPI dynamic methods and existing functionality
+     */
+    public function __call($method, $parameters)
+    {
+        // First, try OpenAPI-based methods
+        if (method_exists($this, 'hasOpenApiSchema') && $this->hasOpenApiSchema()) {
+            try {
+                return $this->openApiCall($method, $parameters);
+            } catch (\BadMethodCallException $e) {
+                // Continue to other methods if OpenAPI doesn't handle it
+            }
+        }
+
+        // Then try lazy loading relationships
+        try {
+            return $this->lazyLoadsCall($method, $parameters);
+        } catch (\BadMethodCallException $e) {
+            // Continue to parent if lazy loading doesn't handle it
+        }
+
+        // Fall back to parent __call
+        return parent::__call($method, $parameters);
+    }
+
+    /**
      * Get the API endpoint for this model.
      *
-     * This method should be overridden in child classes.
+     * This method is enhanced with OpenAPI support while maintaining backward compatibility.
      *
      * @return string
      */
     public function getApiEndpoint(): string
     {
+        // The HasOpenApiSchema trait's getApiEndpoint method will be used due to insteadof resolution
+        // This ensures OpenAPI-based endpoint resolution takes precedence
+        
+        // Fallback to original implementation if OpenAPI is not available
         if (property_exists($this, 'apiEndpoint')) {
             return $this->apiEndpoint;
         }
