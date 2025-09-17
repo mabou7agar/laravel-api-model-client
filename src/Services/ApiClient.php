@@ -7,6 +7,8 @@ use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
 use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Exception\RequestException;
 
 class ApiClient implements ApiClientInterface
 {
@@ -190,7 +192,7 @@ class ApiClient implements ApiClientInterface
         // Configure SSL verification based on environment and configuration
         $sslConfig = config('api-client.ssl', []);
         $shouldVerifySSL = $sslConfig['verify'] ?? !app()->environment(['local', 'testing']);
-        
+
         if (!$shouldVerifySSL) {
             $client = $client->withoutVerifying();
         }
@@ -198,29 +200,22 @@ class ApiClient implements ApiClientInterface
         // Add additional SSL options if configured
         if (!empty($sslConfig)) {
             $sslOptions = [];
-            
+
             if (isset($sslConfig['verify_host']) && !$sslConfig['verify_host']) {
                 $sslOptions['verify_host'] = false;
             }
-            
+
             if (isset($sslConfig['ca_bundle']) && $sslConfig['ca_bundle']) {
                 $sslOptions['verify'] = $sslConfig['ca_bundle'];
             }
-            
+
             if (!empty($sslOptions)) {
                 $client = $client->withOptions($sslOptions);
             }
         }
 
-        // Send the request based on method
-        $response = match (strtoupper($method)) {
-            'GET' => $client->get($url, $options['query'] ?? []),
-            'DELETE' => $client->delete($url, $options['query'] ?? []),
-            'POST' => $client->post($url, $options['json'] ?? []),
-            'PUT' => $client->put($url, $options['json'] ?? []),
-            'PATCH' => $client->patch($url, $options['json'] ?? []),
-            default => $client->send($method, $url, $options),
-        };
+        // Send the request using direct Guzzle client to avoid PHP 8.2 deprecation warnings
+        $response = $this->sendRequestWithGuzzle($method, $url, $options, $headers, $timeout, $connectTimeout, $shouldVerifySSL);
 
         if ($response->successful()) {
             $data = $response->json();
@@ -313,8 +308,8 @@ class ApiClient implements ApiClientInterface
 
         // Check if we should retry server errors
         $statusCode = $exception->hasResponse() ? $exception->getResponse()->getStatusCode() : null;
-        $shouldRetry = ($this->config['error_handling']['retry_server_errors'] ?? true) && 
-                       $statusCode >= 500 && 
+        $shouldRetry = ($this->config['error_handling']['retry_server_errors'] ?? true) &&
+                       $statusCode >= 500 &&
                        $statusCode < 600;
 
         if ($shouldRetry) {
@@ -418,5 +413,120 @@ class ApiClient implements ApiClientInterface
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Send HTTP request using Guzzle directly to avoid PHP 8.2 deprecation warnings
+     *
+     * @param string $method
+     * @param string $url
+     * @param array $options
+     * @param array $headers
+     * @param int $timeout
+     * @param int $connectTimeout
+     * @param bool $shouldVerifySSL
+     * @return object
+     */
+    protected function sendRequestWithGuzzle(string $method, string $url, array $options, array $headers, int $timeout, int $connectTimeout, bool $shouldVerifySSL)
+    {
+        // Build Guzzle client options
+        $guzzleOptions = [
+            'timeout' => $timeout,
+            'connect_timeout' => $connectTimeout,
+            'headers' => $headers,
+            'verify' => $shouldVerifySSL,
+            'http_errors' => false, // Let us handle HTTP errors manually
+        ];
+
+        // Add SSL options if configured
+        $sslConfig = config('api-client.ssl', []);
+        if (!empty($sslConfig)) {
+            if (isset($sslConfig['verify_host']) && !$sslConfig['verify_host']) {
+                $guzzleOptions['verify_host'] = false;
+            }
+
+            if (isset($sslConfig['ca_bundle']) && $sslConfig['ca_bundle']) {
+                $guzzleOptions['verify'] = $sslConfig['ca_bundle'];
+            }
+        }
+
+        // Prepare request data based on method
+        switch (strtoupper($method)) {
+            case 'GET':
+            case 'DELETE':
+                if (!empty($options['query'])) {
+                    $guzzleOptions['query'] = $options['query'];
+                }
+                break;
+            case 'POST':
+            case 'PUT':
+            case 'PATCH':
+                if (!empty($options['json'])) {
+                    $guzzleOptions['json'] = $options['json'];
+                }
+                break;
+        }
+
+        try {
+            // Create Guzzle client and send request
+            $guzzleClient = new GuzzleClient();
+            $guzzleResponse = $guzzleClient->request($method, $url, $guzzleOptions);
+
+            // Convert Guzzle response to Laravel HTTP response format
+            return $this->convertGuzzleResponse($guzzleResponse);
+
+        } catch (RequestException $e) {
+            // Handle Guzzle request exceptions
+            if ($e->hasResponse()) {
+                return $this->convertGuzzleResponse($e->getResponse());
+            }
+
+            throw new ApiException('HTTP request failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Convert Guzzle response to Laravel HTTP response format
+     *
+     * @param \Psr\Http\Message\ResponseInterface $guzzleResponse
+     * @return object
+     */
+    protected function convertGuzzleResponse($guzzleResponse)
+    {
+        // Create a mock Laravel HTTP response that mimics the interface
+        return new class($guzzleResponse) {
+            private $guzzleResponse;
+
+            public function __construct($guzzleResponse)
+            {
+                $this->guzzleResponse = $guzzleResponse;
+            }
+
+            public function successful(): bool
+            {
+                return $this->guzzleResponse->getStatusCode() >= 200 && $this->guzzleResponse->getStatusCode() < 300;
+            }
+
+            public function status(): int
+            {
+                return $this->guzzleResponse->getStatusCode();
+            }
+
+            public function json(): array
+            {
+                $body = (string) $this->guzzleResponse->getBody();
+                return json_decode($body, true) ?? [];
+            }
+
+            public function body(): string
+            {
+                return (string) $this->guzzleResponse->getBody();
+            }
+
+            public function headers(): array
+            {
+                return $this->guzzleResponse->getHeaders();
+            }
+        };
     }
 }

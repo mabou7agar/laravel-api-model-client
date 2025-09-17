@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 
 class BelongsToFromApi extends ApiRelation
 {
@@ -26,14 +27,14 @@ class BelongsToFromApi extends ApiRelation
     /**
      * Create a new belongs to from API relationship instance.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder|\Illuminate\Database\Eloquent\Builder $query
      * @param \Illuminate\Database\Eloquent\Model $parent
      * @param string $endpoint
      * @param string $foreignKey
      * @param string $ownerKey
      * @return void
      */
-    public function __construct(Builder $query, Model $parent, string $endpoint, string $foreignKey, string $ownerKey)
+    public function __construct(ApiQueryBuilder|Builder $query, Model $parent, string $endpoint, string $foreignKey, string $ownerKey)
     {
         $this->foreignKey = $foreignKey;
         $this->ownerKey = $ownerKey;

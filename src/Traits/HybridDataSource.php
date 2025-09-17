@@ -6,17 +6,18 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Hybrid Data Source Trait
- * 
+ *
  * Provides intelligent switching between database and API data sources
  * based on configuration modes. Overrides all standard Eloquent methods
  * to work seamlessly with both local database and remote API.
- * 
+ *
  * Modes:
  * - 'api_only': All operations use API exclusively
- * - 'db_only': All operations use database exclusively  
+ * - 'db_only': All operations use database exclusively
  * - 'hybrid': Check database first, fallback to API
  * - 'api_first': Check API first, sync to database
  * - 'dual_sync': Keep both database and API in sync
@@ -48,7 +49,7 @@ trait HybridDataSource
         $modelClass = get_class($this);
         $modelName = class_basename($modelClass);
         $configKey = 'api-model-client.models.' . strtolower($modelName) . '.data_source_mode';
-        
+
         if (Config::has($configKey)) {
             return Config::get($configKey);
         }
@@ -96,7 +97,7 @@ trait HybridDataSource
                 return static::findFromApiOnly($id, $columns);
 
             case self::MODE_DB_ONLY:
-                return parent::find($id, $columns);
+                return static::findFromDatabase($id, $columns);
 
             case self::MODE_HYBRID:
                 return static::findHybrid($id, $columns);
@@ -128,7 +129,7 @@ trait HybridDataSource
                 return static::allFromApiOnly($columns);
 
             case self::MODE_DB_ONLY:
-                return parent::all($columns);
+                return static::allFromDatabase($columns);
 
             case self::MODE_HYBRID:
                 return static::allHybrid($columns);
@@ -159,7 +160,7 @@ trait HybridDataSource
                 return $this->saveToApiOnly($options);
 
             case self::MODE_DB_ONLY:
-                return parent::save($options);
+                return $this->saveToDatabase($options);
 
             case self::MODE_HYBRID:
                 return $this->saveHybrid($options);
@@ -189,7 +190,7 @@ trait HybridDataSource
                 return $this->deleteFromApiOnly();
 
             case self::MODE_DB_ONLY:
-                return parent::delete();
+                return $this->deleteFromDatabase();
 
             case self::MODE_HYBRID:
                 return $this->deleteHybrid();
@@ -221,7 +222,7 @@ trait HybridDataSource
                 return static::createInApiOnly($attributes);
 
             case self::MODE_DB_ONLY:
-                return parent::create($attributes);
+                return static::createInDatabase($attributes);
 
             case self::MODE_HYBRID:
                 return static::createHybrid($attributes);
@@ -265,9 +266,9 @@ trait HybridDataSource
      */
     protected static function findHybrid($id, $columns = ['*'])
     {
-        // Try database first
-        $model = parent::find($id, $columns);
-        
+        // Try database first using direct Eloquent query to avoid recursion
+        $model = static::findFromDatabase($id, $columns);
+
         if ($model) {
             return $model;
         }
@@ -275,7 +276,7 @@ trait HybridDataSource
         // Fallback to API
         try {
             $apiModel = static::findFromApi($id);
-            
+
             if ($apiModel) {
                 // Optionally sync to database for future queries
                 $apiModel->syncToDatabase();
@@ -301,7 +302,7 @@ trait HybridDataSource
     {
         try {
             $apiModel = static::findFromApi($id);
-            
+
             if ($apiModel) {
                 // Sync to database
                 $apiModel->syncToDatabase();
@@ -314,7 +315,7 @@ trait HybridDataSource
         }
 
         // Fallback to database
-        return parent::find($id, $columns);
+        return static::findFromDatabase($id, $columns);
     }
 
     /**
@@ -326,7 +327,7 @@ trait HybridDataSource
      */
     protected static function findDualSync($id, $columns = ['*'])
     {
-        $dbModel = parent::find($id, $columns);
+        $dbModel = static::findFromDatabase($id, $columns);
         $apiModel = null;
 
         try {
@@ -342,7 +343,7 @@ trait HybridDataSource
             // Compare timestamps and return newer data
             $apiUpdated = $apiModel->updated_at ?? $apiModel->created_at;
             $dbUpdated = $dbModel->updated_at ?? $dbModel->created_at;
-            
+
             if ($apiUpdated > $dbUpdated) {
                 $apiModel->syncToDatabase();
                 return $apiModel;
@@ -388,8 +389,8 @@ trait HybridDataSource
     protected static function allHybrid($columns = ['*'])
     {
         // Try database first
-        $dbModels = parent::all($columns);
-        
+        $dbModels = static::allFromDatabase($columns);
+
         if ($dbModels->isNotEmpty()) {
             return $dbModels;
         }
@@ -397,7 +398,7 @@ trait HybridDataSource
         // Fallback to API
         try {
             $apiModels = static::allFromApi();
-            
+
             if ($apiModels->isNotEmpty()) {
                 // Optionally sync to database
                 static::syncCollectionToDatabase($apiModels);
@@ -422,7 +423,7 @@ trait HybridDataSource
     {
         try {
             $apiModels = static::allFromApi();
-            
+
             if ($apiModels->isNotEmpty()) {
                 // Sync to database
                 static::syncCollectionToDatabase($apiModels);
@@ -435,7 +436,7 @@ trait HybridDataSource
         }
 
         // Fallback to database
-        return parent::all($columns);
+        return static::allFromDatabase($columns);
     }
 
     /**
@@ -446,7 +447,7 @@ trait HybridDataSource
      */
     protected static function allDualSync($columns = ['*'])
     {
-        $dbModels = parent::all($columns);
+        $dbModels = static::allFromDatabase($columns);
         $apiModels = new Collection();
 
         try {
@@ -461,7 +462,7 @@ trait HybridDataSource
         if ($apiModels->isNotEmpty()) {
             static::syncCollectionToDatabase($apiModels);
         }
-        
+
         if ($dbModels->isNotEmpty()) {
             static::syncCollectionToApi($dbModels);
         }
@@ -502,7 +503,7 @@ trait HybridDataSource
 
         // Try database first
         try {
-            $dbSaved = parent::save($options);
+            $dbSaved = $this->saveToDatabase($options);
         } catch (\Exception $e) {
             Log::warning("Database save failed for " . static::class, [
                 'error' => $e->getMessage()
@@ -531,10 +532,10 @@ trait HybridDataSource
     {
         try {
             $apiSaved = $this->saveToApi($options);
-            
+
             if ($apiSaved) {
                 // Sync to database
-                parent::save($options);
+                $this->saveToDatabase($options);
                 return true;
             }
         } catch (\Exception $e) {
@@ -544,7 +545,7 @@ trait HybridDataSource
         }
 
         // Fallback to database
-        return parent::save($options);
+        return $this->saveToDatabase($options);
     }
 
     /**
@@ -560,7 +561,7 @@ trait HybridDataSource
 
         // Save to both sources
         try {
-            $dbSaved = parent::save($options);
+            $dbSaved = $this->saveToDatabase($options);
         } catch (\Exception $e) {
             Log::error("Database save failed in dual sync for " . static::class, [
                 'error' => $e->getMessage()
@@ -586,7 +587,7 @@ trait HybridDataSource
     protected function syncToDatabase(): bool
     {
         try {
-            return parent::save();
+            return $this->saveToDatabase();
         } catch (\Exception $e) {
             Log::error("Database sync failed for " . static::class, [
                 'error' => $e->getMessage(),
@@ -617,7 +618,7 @@ trait HybridDataSource
                 }
                 return $result;
             }
-            
+
             return $this->saveToApi();
         } catch (\Exception $e) {
             Log::error("API sync failed for " . static::class, [
@@ -652,6 +653,178 @@ trait HybridDataSource
         foreach ($models as $model) {
             $model->syncToApi();
         }
+    }
+
+    /**
+     * Find a record from database with table existence check.
+     *
+     * @param mixed $id
+     * @param array $columns
+     * @return static|null
+     */
+    protected static function findFromDatabase($id, $columns = ['*'])
+    {
+        if (!static::tableExists()) {
+            return null;
+        }
+
+        try {
+            $instance = new static();
+            return $instance->newQuery()->find($id, $columns);
+        } catch (\Exception $e) {
+            Log::warning("Database find failed for " . static::class . " ID: {$id}", [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Get all records from database with table existence check.
+     *
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    protected static function allFromDatabase($columns = ['*'])
+    {
+        if (!static::tableExists()) {
+            return new \Illuminate\Database\Eloquent\Collection();
+        }
+
+        try {
+            $instance = new static();
+            return $instance->newQuery()->get($columns);
+        } catch (\Exception $e) {
+            Log::warning("Database all failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+            return new \Illuminate\Database\Eloquent\Collection();
+        }
+    }
+
+    /**
+     * Save model to database only.
+     *
+     * @param array $options
+     * @return bool
+     */
+    protected function saveToDatabase(array $options = []): bool
+    {
+        if (!static::tableExists()) {
+            return false;
+        }
+
+        try {
+            // Use Eloquent's save method directly
+            return $this->saveToEloquent($options);
+        } catch (\Exception $e) {
+            Log::warning("Database save failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Delete model from database only.
+     *
+     * @return bool
+     */
+    protected function deleteFromDatabase(): bool
+    {
+        if (!static::tableExists()) {
+            return false;
+        }
+
+        try {
+            // Use Eloquent's delete method directly
+            return $this->deleteFromEloquent();
+        } catch (\Exception $e) {
+            Log::warning("Database delete failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Create model in database only.
+     *
+     * @param array $attributes
+     * @return static|null
+     */
+    protected static function createInDatabase(array $attributes = [])
+    {
+        if (!static::tableExists()) {
+            return null;
+        }
+
+        try {
+            $instance = new static($attributes);
+            if ($instance->saveToDatabase()) {
+                return $instance;
+            }
+            return null;
+        } catch (\Exception $e) {
+            Log::warning("Database create failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Check if the model's table exists in the database.
+     *
+     * @return bool
+     */
+    protected static function tableExists(): bool
+    {
+        try {
+            $instance = new static();
+            $tableName = $instance->getTable();
+            return Schema::hasTable($tableName);
+        } catch (\Exception $e) {
+            Log::warning("Table existence check failed for " . static::class, [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Save using Eloquent directly (bypassing trait methods).
+     *
+     * @param array $options
+     * @return bool
+     */
+    protected function saveToEloquent(array $options = []): bool
+    {
+        // Get the parent class methods directly
+        $reflection = new \ReflectionClass(get_parent_class($this));
+        if ($reflection->hasMethod('save')) {
+            return parent::save($options);
+        }
+
+        // Fallback to basic Eloquent save
+        return $this->exists ? $this->performUpdate($this->newQuery()) : $this->performInsert($this->newQuery());
+    }
+
+    /**
+     * Delete using Eloquent directly (bypassing trait methods).
+     *
+     * @return bool
+     */
+    protected function deleteFromEloquent(): bool
+    {
+        // Get the parent class methods directly
+        $reflection = new \ReflectionClass(get_parent_class($this));
+        if ($reflection->hasMethod('delete')) {
+            return parent::delete();
+        }
+
+        // Fallback to basic Eloquent delete
+        return $this->newQuery()->where($this->getKeyName(), $this->getKey())->delete();
     }
 
     /**

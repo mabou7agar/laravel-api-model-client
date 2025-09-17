@@ -21,15 +21,13 @@ trait HandlesApiModelCreation
         }
 
         try {
-            // Create a fresh instance of the model class
+            // ✅ SIMPLIFIED: Create model using standard method call instead of complex reflection
             $modelClass = get_class($model);
             $newModel = new $modelClass();
             
-            // Use reflection to call newFromApiResponse directly, bypassing all __call interference
-            $reflection = new \ReflectionClass($newModel);
-            if ($reflection->hasMethod('newFromApiResponse')) {
-                $method = $reflection->getMethod('newFromApiResponse');
-                return $method->invoke($newModel, $responseData);
+            // Call newFromApiResponse directly - let normal method resolution handle it
+            if (method_exists($newModel, 'newFromApiResponse')) {
+                return $newModel->newFromApiResponse($responseData);
             }
             
             // Fallback: create model with basic attributes if newFromApiResponse is not available

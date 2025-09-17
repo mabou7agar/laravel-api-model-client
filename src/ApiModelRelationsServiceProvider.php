@@ -20,6 +20,7 @@ use MTechStack\LaravelApiModelClient\Services\Auth\BasicAuth;
 use MTechStack\LaravelApiModelClient\Services\Auth\BearerTokenAuth;
 use MTechStack\LaravelApiModelClient\Middleware\LoggingMiddleware;
 use MTechStack\LaravelApiModelClient\Middleware\RateLimitMiddleware;
+use MTechStack\LaravelApiModelClient\Providers\ApiDebugServiceProvider;
 use Illuminate\Support\ServiceProvider;
 
 class ApiModelRelationsServiceProvider extends ServiceProvider
@@ -56,6 +57,11 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
             __DIR__ . '/../config/openapi.php' => config_path('openapi.php'),
         ], 'openapi-config');
 
+        // Publish API Debug configuration
+        $this->publishes([
+            __DIR__ . '/../config/api-debug.php' => config_path('api-debug.php'),
+        ], 'api-debug-config');
+
         // Publish API cache migration
         $this->publishes([
             __DIR__ . '/../database/migrations/2024_01_01_000000_create_api_cache_table.php' => database_path('migrations/2024_01_01_000000_create_api_cache_table.php'),
@@ -77,6 +83,9 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
         
         // Register macros
         ApiModelMacros::register();
+
+        // Register debug service provider for auto-debug functionality
+        $this->app->register(ApiDebugServiceProvider::class);
     }
 
     /**

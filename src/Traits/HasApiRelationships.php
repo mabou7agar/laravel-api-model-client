@@ -3,6 +3,7 @@
 namespace MTechStack\LaravelApiModelClient\Traits;
 
 use MTechStack\LaravelApiModelClient\Relations\HasManyFromApi;
+use MTechStack\LaravelApiModelClient\Relations\HasOneFromApi;
 use MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi;
 use MTechStack\LaravelApiModelClient\Relations\HasManyThroughFromApi;
 use Illuminate\Support\Str;
@@ -34,6 +35,33 @@ trait HasApiRelationships
         }
         
         return new HasManyFromApi($instance->newQuery(), $this, $endpoint, $foreignKey, $localKey);
+    }
+    
+    /**
+     * Define a has-one relationship with an API endpoint.
+     *
+     * @param string $related Related model class
+     * @param string|null $endpoint API endpoint for the relationship (null to use default)
+     * @param string|null $foreignKey Foreign key on the related model
+     * @param string|null $localKey Local key on this model
+     * @return \MTechStack\LaravelApiModelClient\Relations\HasOneFromApi
+     */
+    public function hasOneFromApi($related, $endpoint = null, $foreignKey = null, $localKey = null)
+    {
+        $instance = $this->newRelatedInstance($related);
+        
+        // If no foreign key was provided, use the default naming convention
+        $foreignKey = $foreignKey ?: $this->getForeignKey();
+        
+        // If no local key was provided, use the primary key of this model
+        $localKey = $localKey ?: $this->getKeyName();
+        
+        // If no endpoint was provided, use the default endpoint of the related model
+        if ($endpoint === null) {
+            $endpoint = $instance->getApiEndpoint();
+        }
+        
+        return new HasOneFromApi($instance->newQuery(), $this, $endpoint, $foreignKey, $localKey);
     }
     
     /**

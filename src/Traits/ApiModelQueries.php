@@ -94,11 +94,13 @@ trait ApiModelQueries
                 // Make the API request
                 $response = $apiClient->get($endpoint);
 
-                // Map the API response to model attributes
-                $attributes = $instance->mapApiAttributes($response);
-
-                // Create a new model instance with the attributes
-                $model = $instance->newInstance($attributes, true);
+                // ✅ FIX: Use newFromApiResponse instead of mapApiAttributes for proper attribute flattening
+                $model = $instance->newFromApiResponse($response);
+                
+                if ($model === null) {
+                    return null;
+                }
+                
                 $model->exists = true;
 
                 // Merge with local data if enabled
@@ -159,11 +161,13 @@ trait ApiModelQueries
                 $models = $instance->newCollection();
 
                 foreach ($response as $item) {
-                    // Map the API response to model attributes
-                    $attributes = $instance->mapApiAttributes($item);
-
-                    // Create a new model instance with the attributes
-                    $model = $instance->newInstance($attributes, true);
+                    // ✅ FIX: Use newFromApiResponse instead of mapApiAttributes for proper attribute flattening
+                    $model = $instance->newFromApiResponse(['data' => $item]);
+                    
+                    if ($model === null) {
+                        continue;
+                    }
+                    
                     $model->exists = true;
 
                     // Merge with local data if enabled
@@ -233,11 +237,13 @@ trait ApiModelQueries
                 $response = $apiClient->post($endpoint, $attributes);
             }
 
-            // Map the API response to model attributes
-            $responseAttributes = $this->mapApiAttributes($response);
-
-            // Update the model with the response attributes
-            $this->setRawAttributes($responseAttributes, true);
+            // ✅ FIX: Use newFromApiResponse for proper attribute flattening, then merge attributes
+            $tempModel = $this->newFromApiResponse($response);
+            
+            if ($tempModel !== null) {
+                // Update the current model with the flattened attributes
+                $this->setRawAttributes($tempModel->getAttributes(), true);
+            }
             $this->exists = true;
 
             // Merge with local data if enabled

@@ -15,7 +15,7 @@ trait HasApiOperations
      * @param mixed $id
      * @return static|null
      */
-    protected function findFromApiImpl($id)
+    public function findFromApiImpl($id)
     {
         $cacheKey = $this->getApiCacheKey('find', $id);
         $cacheTtl = $this->getCacheTtl();
@@ -56,7 +56,7 @@ trait HasApiOperations
      *
      * @return \Illuminate\Support\Collection
      */
-    protected function allFromApiImpl()
+    public function allFromApiImpl()
     {
         $cacheKey = $this->getApiCacheKey('all');
         $cacheTtl = $this->getCacheTtl();
@@ -97,7 +97,7 @@ trait HasApiOperations
      *
      * @return bool
      */
-    protected function saveToApiImpl()
+    public function saveToApiImpl()
     {
         try {
             $endpoint = $this->getApiEndpoint();
@@ -146,7 +146,7 @@ trait HasApiOperations
      *
      * @return bool
      */
-    protected function deleteFromApiImpl()
+    public function deleteFromApiImpl()
     {
         try {
             $id = $this->getKey();
@@ -174,54 +174,11 @@ trait HasApiOperations
         }
     }
     
-    /**
-     * Create a new model instance from an API response.
-     *
-     * @param array $response
-     * @return static|null
-     */
-    protected function newFromApiResponse($response = [])
-    {
-        if (empty($response)) {
-            return null;
-        }
-        
-        // Map API fields to model attributes
-        $attributes = $this->mapApiResponseToAttributes($response);
-        
-        // Cast attributes to their proper types
-        $attributes = $this->castApiResponseData($attributes);
-        
-        // Create a new model instance with the attributes
-        $model = new static($attributes);
-        $model->exists = true;
-        
-        return $model;
-    }
+    // ✅ REMOVED: Problematic newFromApiResponse method that caused infinite recursion
+    // The ApiModel class already has a proper implementation of this method
     
-    /**
-     * Create a new collection of models from an API response.
-     *
-     * @param array $response
-     * @return \Illuminate\Support\Collection
-     */
-    protected function newCollectionFromApiResponse($response)
-    {
-        // Handle different API response formats
-        $items = $this->extractItemsFromResponse($response);
-        
-        // Create a collection of models
-        $models = new Collection();
-        
-        foreach ($items as $item) {
-            $model = $this->newFromApiResponse($item);
-            if ($model !== null) {
-                $models->push($model);
-            }
-        }
-        
-        return $models;
-    }
+    // ✅ REMOVED: newCollectionFromApiResponse method that depended on the problematic newFromApiResponse
+    // The ApiModelInterfaceMethods trait already has a proper implementation of this method
     
     /**
      * Extract items from an API response, handling different response formats.
@@ -229,7 +186,7 @@ trait HasApiOperations
      * @param array $response
      * @return array
      */
-    protected function extractItemsFromResponse($response)
+    public function extractItemsFromResponse($response)
     {
         // If response is already an array of items, return it
         if (isset($response[0])) {
@@ -256,7 +213,7 @@ trait HasApiOperations
      * @param string $message
      * @throws \Exception
      */
-    protected function handleApiException(\Exception $exception, $message)
+    public function handleApiException(\Exception $exception, $message)
     {
         // Log the error if configured to do so
         if (config('api-model-relations.error_handling.log_errors', true)) {
@@ -280,7 +237,7 @@ trait HasApiOperations
      * @param mixed $id
      * @return string
      */
-    protected function getApiCacheKey($operation, $id = null)
+    public function getApiCacheKey($operation, $id = null)
     {
         $prefix = config('api-model-relations.cache.prefix', 'api_model_');
         $class = str_replace('\\', '_', get_class($this));
@@ -298,7 +255,7 @@ trait HasApiOperations
      * @param mixed $id
      * @return void
      */
-    protected function clearModelCache($id)
+    public function clearModelCache($id)
     {
         if (config('api-model-relations.cache.enabled', true)) {
             $cacheKey = $this->getApiCacheKey('find', $id);
@@ -311,7 +268,7 @@ trait HasApiOperations
      *
      * @return void
      */
-    protected function clearAllCache()
+    public function clearAllCache()
     {
         if (config('api-model-relations.cache.enabled', true)) {
             $cacheKey = $this->getApiCacheKey('all');
@@ -326,7 +283,7 @@ trait HasApiOperations
      * @param mixed $payload
      * @return void
      */
-    protected function fireApiEvent($event, $payload = null)
+    public function fireApiEvent($event, $payload = null)
     {
         $className = get_class($this);
         $eventName = "api.{$className}.{$event}";

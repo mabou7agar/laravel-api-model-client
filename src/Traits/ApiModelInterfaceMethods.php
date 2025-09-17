@@ -760,7 +760,25 @@ trait ApiModelInterfaceMethods
             $attributes = $this->castApiResponseData($attributes);
         }
         
-        $model = new static($attributes);
+        // Create model instance without mass assignment restrictions
+        // This ensures ALL API response data is preserved, not just fillable fields
+        $model = new static();
+        
+        // Store the complete API response for debugging and pre-loaded relations
+        $model->setApiResponseData($response);
+        
+        // Set all attributes directly, bypassing fillable restrictions
+        if (config('api-debug.output.console', false)) {
+            echo "DEBUG: Setting " . count($attributes) . " attributes: " . implode(', ', array_keys($attributes)) . "\n";
+        }
+        
+        foreach ($attributes as $key => $value) {
+            $model->setAttribute($key, $value);
+            if (config('api-debug.output.console', false) && in_array($key, ['variants', 'images', 'data', 'id', 'name', 'type'])) {
+                echo "DEBUG: Set attribute '{$key}': " . (is_array($value) ? count($value) . " items" : $value) . "\n";
+            }
+        }
+        
         $model->exists = true;
         
         return $model;

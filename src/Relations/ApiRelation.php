@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\App;
+use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 
 abstract class ApiRelation extends Relation
 {
@@ -20,15 +21,28 @@ abstract class ApiRelation extends Relation
     /**
      * Create a new API relation instance.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder|\Illuminate\Database\Eloquent\Builder $query
      * @param \Illuminate\Database\Eloquent\Model $parent
      * @param string $endpoint
      * @return void
      */
-    public function __construct(Builder $query, Model $parent, string $endpoint)
+    public function __construct(ApiQueryBuilder|Builder $query, Model $parent, string $endpoint)
     {
         $this->endpoint = $endpoint;
-        parent::__construct($query, $parent);
+        
+        // Handle ApiQueryBuilder by creating a compatible Builder instance
+        if ($query instanceof ApiQueryBuilder) {
+            // Store the original query for API operations
+            $this->query = $query;
+            $this->parent = $parent;
+            $this->related = $query->getModel();
+            
+            // Initialize relation properties without calling parent constructor
+            static::$constraints = true;
+        } else {
+            // For regular Eloquent Builder, use parent constructor
+            parent::__construct($query, $parent);
+        }
     }
 
     /**

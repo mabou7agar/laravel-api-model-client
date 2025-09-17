@@ -9,6 +9,7 @@ use MTechStack\LaravelApiModelClient\Traits\ApiModelErrorHandling;
 use MTechStack\LaravelApiModelClient\Traits\ApiModelEvents;
 use MTechStack\LaravelApiModelClient\Traits\ApiModelInterfaceMethods;
 use MTechStack\LaravelApiModelClient\Traits\ApiModelQueries;
+use MTechStack\LaravelApiModelClient\Traits\HasApiAttributes;
 use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
@@ -32,6 +33,16 @@ class ApiModel extends Model implements ApiModelInterface
     use LazyLoadsApiRelationships;
     use SyncWithApi;
     use HasOpenApiSchema;
+    use HasApiAttributes;  // CRITICAL FIX: Add missing trait for mapApiResponseToAttributes
+    
+    /**
+     * Store the complete API response data separately from model attributes.
+     * This prevents attribute pollution while maintaining access to original response.
+     *
+     * @var array|null
+     */
+    protected $apiResponseData = null;
+    
     use HybridDataSource {
         // HybridDataSource methods take precedence over other traits
         HybridDataSource::find insteadof ApiModelQueries;
@@ -40,18 +51,21 @@ class ApiModel extends Model implements ApiModelInterface
         HybridDataSource::delete insteadof ApiModelQueries, ApiModelInterfaceMethods;
         HybridDataSource::create insteadof ApiModelQueries;
         HybridDataSource::syncToApi insteadof SyncWithApi;
-        
+
         // Resolve other method collisions
         ApiModelCaching::getCacheTtl insteadof ApiModelInterfaceMethods;
         ApiModelQueries::update insteadof ApiModelInterfaceMethods;
-        
+
+        // CRITICAL FIX: Resolve getApiFieldMapping collision between HasApiAttributes and SyncWithApi
+        HasApiAttributes::getApiFieldMapping insteadof SyncWithApi;
+
         // CRITICAL FIX: Ensure LazyLoadsApiRelationships __call doesn't interfere with newFromApiResponse
         LazyLoadsApiRelationships::__call as lazyLoadsCall;
-        
+
         // Resolve OpenAPI trait method collisions
         HasOpenApiSchema::getApiEndpoint insteadof ApiModelInterfaceMethods;
         HasOpenApiSchema::__call as openApiCall;
-        
+
         // Create aliases for overridden methods
         ApiModelQueries::find as findFromQueries;
         ApiModelQueries::all as allFromQueries;
@@ -85,23 +99,23 @@ class ApiModel extends Model implements ApiModelInterface
     {
         // Get the model class name
         $modelClass = static::class;
-        
+
         // Check if there's a specific observer class defined
         $observerClass = $modelClass . 'Observer';
-        
+
         // Return array of observer classes if they exist
         $observers = [];
-        
+
         if (class_exists($observerClass)) {
             $observers[] = $observerClass;
         }
-        
+
         // Check for observers defined in the model's $observables property
         $instance = static::makeSafeInstance();
         if (property_exists($instance, 'observables') && is_array($instance->observables)) {
             $observers = array_merge($observers, $instance->observables);
         }
-        
+
         return $observers;
     }
 
@@ -174,6 +188,53 @@ class ApiModel extends Model implements ApiModelInterface
     {
         $className = class_basename($this);
         return strtolower(Str::plural($className));
+    }
+    
+    /**
+     * Set the API response data for this model.
+     *
+     * @param array $response
+     * @return void
+     */
+    public function setApiResponseData(array $response): void
+    {
+        $this->apiResponseData = $response;
+    }
+    
+    /**
+     * Get the API response data for this model.
+     *
+     * @return array|null
+     */
+    public function getApiResponseData(): ?array
+    {
+        return $this->apiResponseData;
+    }
+    
+    /**
+     * Check if this model has API response data.
+     *
+     * @return bool
+     */
+    public function hasApiResponseData(): bool
+    {
+        return $this->apiResponseData !== null;
+    }
+    
+    /**
+     * Get a specific key from the API response data.
+     *
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getApiResponseValue(string $key, $default = null)
+    {
+        if ($this->apiResponseData === null) {
+            return $default;
+        }
+        
+        return Arr::get($this->apiResponseData, $key, $default);
     }
 
     /**
@@ -281,7 +342,7 @@ class ApiModel extends Model implements ApiModelInterface
     {
         // The HasOpenApiSchema trait's getApiEndpoint method will be used due to insteadof resolution
         // This ensures OpenAPI-based endpoint resolution takes precedence
-        
+
         // Fallback to original implementation if OpenAPI is not available
         if (property_exists($this, 'apiEndpoint')) {
             return $this->apiEndpoint;
@@ -387,7 +448,8 @@ class ApiModel extends Model implements ApiModelInterface
         $items = $instance->extractItemsFromResponse($response ?? []);
 
         return collect($items)->map(function ($item) {
-            return new static($item ?? []);
+            // CRITICAL FIX: Use newFromApiResponse instead of mass assignment
+            return (new static())->newFromApiResponse($item ?? []);
         });
     }
 
@@ -426,7 +488,9 @@ class ApiModel extends Model implements ApiModelInterface
                 return null;
             }
 
-            return new static($data);
+            // CRITICAL FIX: Use newFromApiResponse instead of mass assignment
+            // This ensures ALL API response data is preserved, not just fillable fields
+            return (new static())->newFromApiResponse(['data' => $data]);
         } catch (\Exception $e) {
             return null;
         }
@@ -496,12 +560,12 @@ class ApiModel extends Model implements ApiModelInterface
         // If response has a 'data' key (nested structure like Bagisto API)
         if (isset($response['data'])) {
             $data = $response['data'];
-            
+
             // If data is an array of items, return it
             if (is_array($data) && isset($data[0])) {
                 return $data;
             }
-            
+
             // If data is a single item, wrap it in an array
             if (is_array($data) && !isset($data[0])) {
                 return [$data];
@@ -530,28 +594,125 @@ class ApiModel extends Model implements ApiModelInterface
      */
     public function newFromApiResponse($response = [])
     {
-        // This method is implemented in the ApiModelInterfaceMethods trait
-        // The trait method will handle the actual logic
         if (empty($response)) {
             return null;
         }
-        
+
         // Map API fields to model attributes if method exists
         if (method_exists($this, 'mapApiResponseToAttributes')) {
             $attributes = $this->mapApiResponseToAttributes($response);
         } else {
             $attributes = $response;
         }
-        
+
         // Cast attributes to their proper types if method exists
         if (method_exists($this, 'castApiResponseData')) {
             $attributes = $this->castApiResponseData($attributes);
         }
-        
-        $model = new static($attributes);
+
+        // CRITICAL FIX: Create model instance without mass assignment restrictions
+        // This ensures ALL API response data is preserved, not just fillable fields
+        $model = new static();
+
+        // Store the complete API response for debugging and pre-loaded relations
+        $model->setApiResponseData($response);
+
+        // Set all attributes directly, bypassing fillable restrictions
+        if (config('api-debug.output.console', false)) {
+            echo "DEBUG: Setting " . count($attributes) . " attributes: " . implode(', ', array_keys($attributes)) . "\n";
+        }
+
+        foreach ($attributes as $key => $value) {
+            $model->setAttribute($key, $value);
+            if (config('api-debug.output.console', false) && in_array($key, ['variants', 'images', 'data', 'id', 'name', 'type'])) {
+                echo "DEBUG: Set attribute '{$key}': " . (is_array($value) ? count($value) . " items" : $value) . "\n";
+            }
+        }
+
         $model->exists = true;
-        
+
         return $model;
+    }
+
+    /**
+     * Get an attribute from the model.
+     * Override to handle relation attributes that should return model collections.
+     *
+     * @param string $key
+     * @return mixed
+     */
+    public function getAttribute($key)
+    {
+        $value = parent::getAttribute($key);
+        
+        // Check if this is a relation attribute that contains raw array data
+        if (is_array($value) && method_exists($this, $key)) {
+            // Check if the method returns a relation
+            try {
+                $relation = $this->$key();
+                if ($relation instanceof \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi) {
+                    // Convert raw array data to model collection
+                    return $this->convertArrayToModelCollection($value, $relation);
+                } elseif ($relation instanceof \MTechStack\LaravelApiModelClient\Relations\HasOneFromApi) {
+                    // Convert raw array data to single model instance
+                    return $this->convertArrayToModelInstance($value, $relation);
+                }
+            } catch (\Exception $e) {
+                // If there's an error, just return the original value
+            }
+        }
+        
+        return $value;
+    }
+
+    /**
+     * Convert raw array data to a collection of model instances.
+     *
+     * @param array $data
+     * @param \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi $relation
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    protected function convertArrayToModelCollection(array $data, $relation)
+    {
+        $models = [];
+        
+        foreach ($data as $item) {
+            if (is_array($item)) {
+                // Create a model instance from the array data
+                $model = $relation->getRelated()->newFromApiResponse($item);
+                if ($model !== null) {
+                    $models[] = $model;
+                }
+            }
+        }
+        
+        return $relation->getRelated()->newCollection($models);
+    }
+
+    /**
+     * Convert raw array data to a single model instance.
+     *
+     * @param array $data
+     * @param \MTechStack\LaravelApiModelClient\Relations\HasOneFromApi $relation
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    protected function convertArrayToModelInstance(array $data, $relation)
+    {
+        // For HasOne relations, we expect either a single item or an array with one item
+        if (empty($data)) {
+            return null;
+        }
+        
+        // If it's an array of items, take the first one
+        if (isset($data[0]) && is_array($data[0])) {
+            $itemData = $data[0];
+        } else {
+            // It's a single item
+            $itemData = $data;
+        }
+        
+        // Create a model instance from the array data
+        return $relation->getRelated()->newFromApiResponse($itemData);
     }
 
     /**
@@ -574,7 +735,7 @@ class ApiModel extends Model implements ApiModelInterface
     protected function initializeTraits()
     {
         // Check if trait initializers exist for this class before trying to iterate
-        if (isset(static::$traitInitializers[static::class]) && 
+        if (isset(static::$traitInitializers[static::class]) &&
             is_array(static::$traitInitializers[static::class])) {
             foreach (static::$traitInitializers[static::class] as $method) {
                 if (method_exists($this, $method)) {
@@ -593,7 +754,7 @@ class ApiModel extends Model implements ApiModelInterface
         if (!isset(static::$traitInitializers[static::class])) {
             static::$traitInitializers[static::class] = [];
         }
-        
+
         // Call parent boot to handle standard Laravel model initialization
         parent::boot();
     }
@@ -611,14 +772,18 @@ class ApiModel extends Model implements ApiModelInterface
         try {
             $client = app('api-client');
             $response = $client->post($this->getApiEndpoint(), $this->getAttributes());
-            
+
             if ($response && isset($response['data'])) {
-                $this->fill($response['data']);
+                // ✅ FIX: Use newFromApiResponse for proper attribute flattening, then merge attributes
+                $tempModel = $this->newFromApiResponse($response);
+                if ($tempModel !== null) {
+                    $this->setRawAttributes($tempModel->getAttributes(), true);
+                }
                 $this->exists = true;
                 $this->wasRecentlyCreated = true;
                 return true;
             }
-            
+
             return false;
         } catch (\Exception $e) {
             \Log::error("API create failed for " . static::class, [
@@ -641,12 +806,16 @@ class ApiModel extends Model implements ApiModelInterface
             $client = app('api-client');
             $endpoint = $this->getApiEndpoint() . '/' . $this->getKey();
             $response = $client->put($endpoint, $this->getAttributes());
-            
+
             if ($response && isset($response['data'])) {
-                $this->fill($response['data']);
+                // ✅ FIX: Use newFromApiResponse for proper attribute flattening, then merge attributes
+                $tempModel = $this->newFromApiResponse($response);
+                if ($tempModel !== null) {
+                    $this->setRawAttributes($tempModel->getAttributes(), true);
+                }
                 return true;
             }
-            
+
             return false;
         } catch (\Exception $e) {
             \Log::error("API update failed for " . static::class, [
@@ -668,7 +837,7 @@ class ApiModel extends Model implements ApiModelInterface
             $client = app('api-client');
             $endpoint = $this->getApiEndpoint() . '/' . $this->getKey();
             $response = $client->delete($endpoint);
-            
+
             return $response !== false;
         } catch (\Exception $e) {
             \Log::error("API delete failed for " . static::class, [
@@ -719,7 +888,7 @@ class ApiModel extends Model implements ApiModelInterface
     {
         try {
             $apiDeleted = $this->deleteFromApiOnly();
-            
+
             if ($apiDeleted) {
                 // Sync to database
                 parent::delete();
@@ -808,7 +977,7 @@ class ApiModel extends Model implements ApiModelInterface
     protected static function createApiFirst(array $attributes = [])
     {
         $instance = static::createInApiOnly($attributes);
-        
+
         if ($instance->exists) {
             // Sync to database
             try {
@@ -819,7 +988,7 @@ class ApiModel extends Model implements ApiModelInterface
                 ]);
             }
         }
-        
+
         return $instance;
     }
 

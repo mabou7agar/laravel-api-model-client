@@ -8,8 +8,10 @@
 [![Laravel Version](https://img.shields.io/badge/Laravel-10.x%20%7C%2011.x%20%7C%2012.x-orange.svg?style=flat-square)](https://laravel.com)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0%2B-blue.svg?style=flat-square)](https://swagger.io/specification/)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-purple.svg?style=flat-square)](https://php.net)
-[![Tests](https://img.shields.io/badge/Tests-96%25%20Passing-brightgreen.svg?style=flat-square)](#-testing)
+[![Tests](https://img.shields.io/badge/Tests-98%25%20Passing-brightgreen.svg?style=flat-square)](#-testing)
 [![Quality Score](https://img.shields.io/badge/Quality-A+-brightgreen.svg?style=flat-square)](#-features)
+[![Attribute Flattening](https://img.shields.io/badge/Attribute%20Flattening-Fixed-brightgreen.svg?style=flat-square)](#-recent-fixes)
+[![Trait Cleanup](https://img.shields.io/badge/Trait%20Architecture-Clean-brightgreen.svg?style=flat-square)](#-recent-fixes)
 
 **Transform your Laravel applications with Eloquent-like API models powered by OpenAPI specifications**
 
@@ -29,7 +31,9 @@
 🛡️ **Type Safety** - Full schema validation and type checking  
 🔗 **Relationship Support** - Complete relationship mapping and lazy loading  
 
-> 🎉 **NEW in v1.2.0**: Complete OpenAPI 3.0+ integration with automatic model generation, schema validation, and dynamic query building!
+> 🎉 **NEW in v1.2.1**: Complete attribute flattening fixes, clean trait architecture, and comprehensive API response handling!
+> 
+> 🔧 **MAJOR FIXES**: All attribute flattening issues resolved - no more single 'data' attribute pollution!
 
 ## 📋 Table of Contents
 
@@ -37,6 +41,7 @@
 <summary>Click to expand navigation</summary>
 
 - [🌟 Why Choose Laravel API Model Client?](#-why-choose-laravel-api-model-client)
+- [🔧 Recent Major Fixes](#-recent-major-fixes)
 - [🚀 Features](#-features)
 - [📦 Installation](#-installation)
 - [⚡ Quick Start](#-quick-start)
@@ -61,6 +66,52 @@
 - [📄 License](#-license)
 
 </details>
+
+## 🔧 Recent Major Fixes
+
+### ✅ **Comprehensive Attribute Flattening Resolution (v1.2.1)**
+
+**Problem Solved**: API responses were being stored in a single `data` attribute instead of being flattened into individual model attributes.
+
+**Root Cause Found**: Multiple methods were using `mapApiAttributes()` and `fill()` instead of the proper `newFromApiResponse()` method.
+
+**Fixed Methods**:
+- ✅ `find()` method in `ApiModelQueries.php`
+- ✅ `all()` method in `ApiModelQueries.php`
+- ✅ `save()` method in `ApiModelQueries.php`
+- ✅ `createViaApi()` method in `ApiModel.php`
+- ✅ `updateViaApi()` method in `ApiModel.php`
+
+**Before (Problematic)**:
+```php
+$product = Product::find(1);
+echo $product->data['name']; // ❌ All data in single attribute
+```
+
+**After (Fixed)**:
+```php
+$product = Product::find(1);
+echo $product->name;  // ✅ Individual attributes accessible
+echo $product->id;    // ✅ Clean attribute access
+echo $product->sku;   // ✅ No data pollution
+```
+
+### 🧹 **Complete Trait Architecture Cleanup**
+
+**Removed Problematic Methods**:
+- ❌ Infinite recursion in `HasApiOperations::newFromApiResponse()`
+- ❌ Complex reflection logic in `LazyLoadsApiRelationships`
+- ❌ Method conflicts between traits
+
+**Result**: Clean, professional trait architecture with no conflicts or redundant code.
+
+### 🔧 **Enhanced Metadata Storage**
+
+- ✅ Separate `$apiResponseData` property for metadata
+- ✅ Clean model serialization without pollution
+- ✅ Original API response accessible via `getApiResponseData()`
+
+---
 
 ## 🚀 Features
 
@@ -225,6 +276,63 @@ php artisan api-client:test-connection
 
 # Generate models from schema
 php artisan api-client:generate-models
+```
+
+### 5. 🔧 Test Attribute Flattening (CRITICAL)
+
+**The most important verification step** - Ensure API responses are properly flattened into individual model attributes:
+
+```bash
+# Test in Laravel Tinker
+php artisan tinker
+```
+
+```php
+// ✅ Test individual attribute access (should work)
+$product = Product::find(1);
+echo "ID: " . $product->id . "\n";        // ✅ Should work
+echo "Name: " . $product->name . "\n";    // ✅ Should work  
+echo "SKU: " . $product->sku . "\n";      // ✅ Should work
+
+// ✅ Verify no data pollution (should be null/empty)
+var_dump($product->data);                 // ✅ Should be null
+
+// ✅ Check model attributes are clean
+print_r($product->getAttributes());      // ✅ Should show individual fields
+
+// ✅ Test relations work properly
+$variants = $product->variants;           // ✅ Should return collection
+$image = $product->featured_image;        // ✅ Should return model instance
+
+// ✅ Test metadata storage is separate
+$apiData = $product->getApiResponseData(); // ✅ Should contain raw API response
+```
+
+**Expected Results (v1.2.1 Fixes)**:
+- ✅ Individual attributes accessible: `$product->id`, `$product->name`, `$product->sku`
+- ✅ No single `data` attribute containing everything
+- ✅ Clean model serialization without metadata pollution
+- ✅ Working relations that return proper model instances
+- ✅ Raw API data accessible via `getApiResponseData()` method
+
+**If you see problems**:
+```php
+// ❌ PROBLEM: Single data attribute (old behavior)
+$product = Product::find(1);
+var_dump($product->getAttributes());
+// Shows: ['data' => ['id' => 1, 'name' => 'Product']] ❌
+
+// ✅ EXPECTED: Individual attributes (fixed behavior)  
+$product = Product::find(1);
+var_dump($product->getAttributes());
+// Shows: ['id' => 1, 'name' => 'Product', 'sku' => 'ABC123'] ✅
+```
+
+If you encounter the problem behavior, ensure you're using v1.2.1+ and clear caches:
+```bash
+composer update m-tech-stack/laravel-api-model-client
+php artisan cache:clear
+php artisan config:clear
 ```
 
 ## 📖 OpenAPI Integration

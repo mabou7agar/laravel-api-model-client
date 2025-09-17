@@ -139,6 +139,29 @@ trait HasApiAttributes
             $attributeName = $mapping[$apiField] ?? $apiField;
             $attributes[$attributeName] = $value;
         }
+        // CRITICAL FIX: Ensure nested data structures are preserved
+        // Handle nested data (like data.variants from API responses)
+        if (isset($data['data']) && is_array($data['data'])) {
+            // Store the complete nested data structure
+            $attributes['data'] = $data['data'];
+
+            // CRITICAL FIX: Flatten ALL nested fields for easier access (both scalar and array fields)
+            // This ensures basic fields like id, name, type are accessible as $model->id
+            foreach ($data['data'] as $nestedKey => $nestedValue) {
+                // Only set if not already mapped to avoid conflicts
+                if (!isset($attributes[$nestedKey])) {
+                    $attributes[$nestedKey] = $nestedValue;
+                }
+            }
+        }
+
+        // Preserve important top-level arrays that might be filtered out
+        $importantFields = ['variants', 'images', 'videos', 'reviews', 'super_attributes', 'base_image', 'formatted_price', 'in_stock', 'is_saved', 'show_quantity_changer'];
+        foreach ($importantFields as $field) {
+            if (isset($data[$field]) && !isset($attributes[$field])) {
+                $attributes[$field] = $data[$field];
+            }
+        }
 
         return $attributes;
     }

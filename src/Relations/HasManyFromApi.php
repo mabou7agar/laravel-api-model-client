@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
 
 class HasManyFromApi extends ApiRelation
 {
@@ -26,14 +28,14 @@ class HasManyFromApi extends ApiRelation
     /**
      * Create a new has many from API relationship instance.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder|\Illuminate\Database\Eloquent\Builder $query
      * @param \Illuminate\Database\Eloquent\Model $parent
      * @param string $endpoint
      * @param string $foreignKey
      * @param string $localKey
      * @return void
      */
-    public function __construct(Builder $query, Model $parent, string $endpoint, string $foreignKey, string $localKey)
+    public function __construct(ApiQueryBuilder|Builder $query, Model $parent, string $endpoint, string $foreignKey, string $localKey)
     {
         $this->foreignKey = $foreignKey;
         $this->localKey = $localKey;
@@ -149,6 +151,12 @@ class HasManyFromApi extends ApiRelation
         
         if (is_null($parentKey)) {
             return $this->related->newCollection();
+        }
+        
+        // Check if the relationship data is already loaded in the parent model
+        $preloadedData = $this->getPreloadedRelationData();
+        if ($preloadedData !== null) {
+            return $this->processPreloadedData($preloadedData);
         }
         
         return $this->getRelationResults($parentKey);
@@ -316,5 +324,204 @@ class HasManyFromApi extends ApiRelation
     public function getQualifiedForeignKeyName()
     {
         return $this->foreignKey;
+    }
+
+    /**
+     * Check if the relationship data is already preloaded in the parent model.
+     * This checks for common API inclusion patterns like 'variants', 'variant', etc.
+     *
+     * @return array|null
+     */
+    protected function getPreloadedRelationData()
+    {
+        $relationName = $this->getRelationName();
+        
+        // Debug: Log what relation name we detected
+        if (config('api-debug.output.console', false)) {
+            echo "🔍 Detected relation name: '{$relationName}'\n";
+        }
+        
+        // Use direct attribute access to avoid triggering relations
+        $attributes = $this->parent->getAttributes();
+        
+        // Check for common API inclusion patterns
+        $possibleKeys = [
+            $relationName,
+            'variants',  // Most common case
+            'variant',   // Singular form
+            'included_variants',
+            'embedded_variants',
+            'included_' . $relationName,
+            'embedded_' . $relationName,
+        ];
+        
+        if (config('api-debug.output.console', false)) {
+            echo "🔍 Checking possible keys: " . implode(', ', $possibleKeys) . "\n";
+            echo "🔍 Available attributes: " . implode(', ', array_keys($attributes)) . "\n";
+        }
+        
+        // Check direct attributes first (avoid getAttribute to prevent recursion)
+        foreach ($possibleKeys as $key) {
+            if (isset($attributes[$key]) && is_array($attributes[$key])) {
+                if (config('api-debug.output.console', false)) {
+                    echo "✅ Found pre-loaded data in '{$key}' attribute: " . count($attributes[$key]) . " items\n";
+                }
+                return $attributes[$key];
+            }
+        }
+        
+        // Check nested data structures (common in API responses)
+        // Look for data.variants, data.variant, etc.
+        if (isset($attributes['data']) && is_array($attributes['data'])) {
+            $nestedData = $attributes['data'];
+            if (config('api-debug.output.console', false)) {
+                echo "🔍 Checking nested data with keys: " . implode(', ', array_keys($nestedData)) . "\n";
+            }
+            
+            foreach ($possibleKeys as $key) {
+                if (isset($nestedData[$key]) && is_array($nestedData[$key])) {
+                    if (config('api-debug.output.console', false)) {
+                        echo "✅ Found pre-loaded data in nested 'data.{$key}': " . count($nestedData[$key]) . " items\n";
+                    }
+                    return $nestedData[$key];
+                }
+            }
+        }
+        
+        // Check if parent has raw API response data with included relationships
+        if ($this->parent->hasApiResponseData()) {
+            $apiResponse = $this->parent->getApiResponseData();
+            if (config('api-debug.output.console', false)) {
+                echo "🔍 Checking API response data with keys: " . implode(', ', array_keys($apiResponse)) . "\n";
+            }
+            
+            // Check direct keys in API response
+            foreach ($possibleKeys as $key) {
+                if (isset($apiResponse[$key]) && is_array($apiResponse[$key])) {
+                    if (config('api-debug.output.console', false)) {
+                        echo "✅ Found pre-loaded data in API response '{$key}': " . count($apiResponse[$key]) . " items\n";
+                    }
+                    return $apiResponse[$key];
+                }
+            }
+            
+            // Check nested data in API response (data.variants, etc.)
+            if (isset($apiResponse['data']) && is_array($apiResponse['data'])) {
+                $nestedApiData = $apiResponse['data'];
+                foreach ($possibleKeys as $key) {
+                    if (isset($nestedApiData[$key]) && is_array($nestedApiData[$key])) {
+                        if (config('api-debug.output.console', false)) {
+                            echo "✅ Found pre-loaded data in API response 'data.{$key}': " . count($nestedApiData[$key]) . " items\n";
+                        }
+                        return $nestedApiData[$key];
+                    }
+                }
+            }
+        }
+        
+        // Check if parent has original attributes with included relationships
+        $originalAttributes = $this->parent->getOriginal();
+        if (is_array($originalAttributes)) {
+            foreach ($possibleKeys as $key) {
+                if (isset($originalAttributes[$key]) && is_array($originalAttributes[$key])) {
+                    if (config('api-debug.output.console', false)) {
+                        echo "✅ Found pre-loaded data in original attributes '{$key}': " . count($originalAttributes[$key]) . " items\n";
+                    }
+                    return $originalAttributes[$key];
+                }
+            }
+            
+            // Check nested data in original attributes
+            if (isset($originalAttributes['data']) && is_array($originalAttributes['data'])) {
+                $nestedOriginalData = $originalAttributes['data'];
+                foreach ($possibleKeys as $key) {
+                    if (isset($nestedOriginalData[$key]) && is_array($nestedOriginalData[$key])) {
+                        if (config('api-debug.output.console', false)) {
+                            echo "✅ Found pre-loaded data in original 'data.{$key}': " . count($nestedOriginalData[$key]) . " items\n";
+                        }
+                        return $nestedOriginalData[$key];
+                    }
+                }
+            }
+        }
+        
+        if (config('api-debug.output.console', false)) {
+            echo "❌ No pre-loaded relation data found\n";
+        }
+        
+        return null;
+    }
+
+    /**
+     * Process preloaded relationship data into a collection of models.
+     *
+     * @param array $preloadedData
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    protected function processPreloadedData(array $preloadedData)
+    {
+        // If the data is empty, return empty collection
+        if (empty($preloadedData)) {
+            return $this->related->newCollection();
+        }
+        
+        // If it's a single item, wrap it in an array
+        if (isset($preloadedData[0]) === false && !empty($preloadedData)) {
+            // Check if this looks like a single model (has keys that aren't numeric)
+            $keys = array_keys($preloadedData);
+            if (!is_numeric($keys[0])) {
+                $preloadedData = [$preloadedData];
+            }
+        }
+        
+        $models = [];
+        
+        foreach ($preloadedData as $item) {
+            if (is_array($item)) {
+                // Try to create a model from the data
+                if (method_exists($this->related, 'newFromApiResponse')) {
+                    $model = $this->related->newFromApiResponse($item);
+                } else {
+                    // Fallback to creating a new instance and filling it
+                    $model = $this->related->newInstance();
+                    $model->fill($item);
+                    $model->exists = true;
+                }
+                
+                if ($model !== null) {
+                    $models[] = $model;
+                }
+            }
+        }
+        
+        return $this->related->newCollection($models);
+    }
+
+    /**
+     * Get the relation name based on the calling method or configuration.
+     *
+     * @return string
+     */
+    protected function getRelationName()
+    {
+        // Try to get the relation name from the debug backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
+        
+        foreach ($trace as $frame) {
+            if (isset($frame['function']) && 
+                isset($frame['class']) && 
+                $frame['class'] === get_class($this->parent) &&
+                !in_array($frame['function'], ['get', 'getResults', '__call', 'getAttribute', 'hasManyFromApi', 'belongsToFromApi'])) {
+                return $frame['function'];
+            }
+        }
+        
+        // Fallback: try to guess from the endpoint or related model class name
+        $relatedClass = get_class($this->related);
+        $baseName = class_basename($relatedClass);
+        
+        // Final fallback - just use 'variants' as most common case
+        // Note: We avoid calling getAttribute() here to prevent infinite recursion
+        return 'variants';
     }
 }
