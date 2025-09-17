@@ -6,7 +6,6 @@ use cebe\openapi\spec\Operation;
 use cebe\openapi\spec\Parameter;
 use cebe\openapi\spec\PathItem;
 use cebe\openapi\spec\Reference;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Trait for extracting endpoint information from OpenAPI specifications
@@ -21,7 +20,7 @@ trait ExtractsEndpoints
         $this->endpoints = [];
 
         if (!$this->openApiSpec->paths) {
-            Log::warning("No paths found in OpenAPI schema");
+            $this->logWarning("No paths found in OpenAPI schema");
             return;
         }
 
@@ -37,7 +36,7 @@ trait ExtractsEndpoints
             $this->extractPathOperations($path, $pathItem);
         }
 
-        Log::info("Extracted endpoints", ['count' => count($this->endpoints)]);
+        $this->logInfo("Extracted endpoints", ['count' => count($this->endpoints)]);
     }
 
     /**

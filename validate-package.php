@@ -1,13 +1,18 @@
 <?php
 
 /**
- * Package Validation Script for Laravel API Model Client v1.0.9
+ * Package Validation Script for Laravel API Model Client
  * 
  * This script validates that all our critical fixes are working correctly
  * by testing the core functionality without requiring a full test environment.
  */
 
-echo "🚀 LARAVEL API MODEL CLIENT v1.0.9 - PACKAGE VALIDATION\n";
+// Get current version from composer.json
+$composerContent = file_get_contents('composer.json');
+$composerData = json_decode($composerContent, true);
+$currentVersion = $composerData['version'] ?? 'unknown';
+
+echo "🚀 LARAVEL API MODEL CLIENT v{$currentVersion} - PACKAGE VALIDATION\n";
 echo "======================================================\n\n";
 
 $passed = 0;
@@ -66,8 +71,9 @@ test('Composer.json has correct structure', function() {
         return "Invalid composer.json format";
     }
     
-    if ($composerJson['version'] !== '1.0.9') {
-        return "Version should be 1.0.9, found: " . $composerJson['version'];
+    // Version validation - just check that version exists and is valid semver format
+    if (!isset($composerJson['version']) || !preg_match('/^\d+\.\d+\.\d+/', $composerJson['version'])) {
+        return "Invalid or missing version in composer.json";
     }
     
     if (!isset($composerJson['autoload']['psr-4']['MTechStack\\LaravelApiModelClient\\'])) {
@@ -226,7 +232,7 @@ echo "❌ Failed: {$failed}\n";
 
 if ($failed === 0) {
     echo "\n🎉 ALL VALIDATIONS PASSED!\n";
-    echo "✅ Package v1.0.9 structure is correct\n";
+    echo "✅ Package v{$currentVersion} structure is correct\n";
     echo "✅ All critical fixes are implemented\n";
     echo "✅ Test suite is properly configured\n";
     echo "✅ Ready for production deployment\n";
@@ -243,7 +249,7 @@ echo "✅ Namespace fixes for ApiQueryBuilder import\n";
 echo "✅ Service provider setBaseUrl() fix\n";
 echo "✅ Data structure parsing improvements\n";
 echo "✅ Test suite with proper PHPUnit assertions\n";
-echo "✅ Package structure and composer.json v1.0.9\n";
+echo "✅ Package structure and composer.json v{$currentVersion}\n";
 
 echo "\n🚀 PACKAGE STATUS: " . ($failed === 0 ? "PRODUCTION READY" : "NEEDS FIXES") . "\n";
 

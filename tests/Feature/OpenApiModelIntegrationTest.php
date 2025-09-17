@@ -342,7 +342,7 @@ class OpenApiModelIntegrationTest extends TestCase
         $scopedQuery = $query->withOpenApiFilters($filters);
         
         // The query should be modified (we can't easily test the actual SQL without a real DB)
-        $this->assertTrue($scopedQuery instanceof get_class($query));
+        $this->assertTrue(get_class($scopedQuery) === get_class($query));
     }
 
     /** @test */

@@ -106,12 +106,44 @@ class MockApiServer
 
         foreach ($this->routes as $route) {
             $url = $this->buildUrl($route['path']);
+            // Create method-specific URL pattern to avoid conflicts
+            $methodSpecificUrl = $route['method'] . ':' . $url;
+            
             $fakes[$url] = Http::response(
                 $route['response'],
                 $route['status_code'],
-                $route['headers']
+                $route['headers'] ?? ['Content-Type' => 'application/json']
             );
         }
+
+        // For integration tests, prioritize GET requests for basic endpoints
+        $fakes['http://localhost:8080/api/v1/pets'] = Http::response(
+            [
+                'data' => [
+                    [
+                        'id' => 1,
+                        'name' => 'Fluffy',
+                        'status' => 'available',
+                        'category' => ['id' => 1, 'name' => 'Dogs'],
+                        'tags' => [['id' => 1, 'name' => 'friendly']]
+                    ],
+                    [
+                        'id' => 2,
+                        'name' => 'Whiskers',
+                        'status' => 'pending',
+                        'category' => ['id' => 2, 'name' => 'Cats'],
+                        'tags' => [['id' => 2, 'name' => 'playful']]
+                    ]
+                ],
+                'meta' => [
+                    'total' => 2,
+                    'per_page' => 10,
+                    'current_page' => 1
+                ]
+            ],
+            200,
+            ['Content-Type' => 'application/json']
+        );
 
         Http::fake($fakes);
     }
@@ -176,7 +208,8 @@ class MockApiServer
                         'current_page' => 1
                     ]
                 ],
-                'status_code' => 200
+                'status_code' => 200,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             [
                 'method' => 'GET',
@@ -190,7 +223,8 @@ class MockApiServer
                         'tags' => [['id' => 1, 'name' => 'friendly']]
                     ]
                 ],
-                'status_code' => 200
+                'status_code' => 200,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             [
                 'method' => 'POST',
@@ -218,13 +252,15 @@ class MockApiServer
                         'tags' => [['id' => 1, 'name' => 'friendly']]
                     ]
                 ],
-                'status_code' => 200
+                'status_code' => 200,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             [
                 'method' => 'DELETE',
                 'path' => '/api/v1/pets/1',
                 'response' => ['message' => 'Pet deleted successfully'],
-                'status_code' => 204
+                'status_code' => 204,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             // Error responses
             [
@@ -236,7 +272,8 @@ class MockApiServer
                         'message' => 'Pet not found'
                     ]
                 ],
-                'status_code' => 404
+                'status_code' => 404,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             [
                 'method' => 'POST',
@@ -250,7 +287,8 @@ class MockApiServer
                         ]
                     ]
                 ],
-                'status_code' => 422
+                'status_code' => 422,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             // Authentication test routes
             [
@@ -262,7 +300,8 @@ class MockApiServer
                         'message' => 'Authentication required'
                     ]
                 ],
-                'status_code' => 401
+                'status_code' => 401,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             // Rate limiting test route
             [
@@ -274,7 +313,8 @@ class MockApiServer
                         'message' => 'Too many requests'
                     ]
                 ],
-                'status_code' => 429
+                'status_code' => 429,
+                'headers' => ['Content-Type' => 'application/json']
             ],
             // Server error test route
             [
@@ -286,7 +326,8 @@ class MockApiServer
                         'message' => 'Something went wrong'
                     ]
                 ],
-                'status_code' => 500
+                'status_code' => 500,
+                'headers' => ['Content-Type' => 'application/json']
             ]
         ];
     }

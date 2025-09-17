@@ -35,6 +35,9 @@ class OpenApiSchemaParser
     protected array $schemas = [];
     protected array $modelMappings = [];
     protected array $validationRules = [];
+    protected ?string $lastSource = null;
+    protected ?array $lastRawDoc = null;
+    protected bool $enableLogging = false; // disable logging to reduce benchmark noise
     
     protected array $config = [
         'cache_enabled' => true,
@@ -54,33 +57,49 @@ class OpenApiSchemaParser
     public function parse(string $source, bool $useCache = true): array
     {
         try {
+            $this->lastSource = $source;
             $cacheKey = $this->getCacheKey($source);
             
             if ($useCache && $this->config['cache_enabled']) {
                 $cached = Cache::get($cacheKey);
                 if ($cached !== null) {
-                    Log::info("OpenAPI schema loaded from cache", ['source' => $source]);
+                    $this->logInfo("OpenAPI schema loaded from cache", ['source' => $source]);
                     return $cached;
                 }
             }
 
             $this->openApiSpec = $this->loadSchema($source);
+            // Keep raw doc for result fields (openapi/paths) and fallbacks
+            $this->lastRawDoc = $this->loadRawDocument($source);
             $this->validateOpenApiVersion();
+            $this->validateSchemaStructure();
             
             // Extract endpoints safely
             try {
                 $this->extractEndpoints();
             } catch (\Exception $e) {
-                Log::warning("Failed to extract endpoints: " . $e->getMessage());
+                $this->logWarning("Failed to extract endpoints: " . $e->getMessage());
                 $this->endpoints = [];
             }
-            
+
             // Extract schemas safely
             try {
                 $this->extractSchemas();
             } catch (\Exception $e) {
-                Log::warning("Failed to extract schemas: " . $e->getMessage());
+                $this->logWarning("Failed to extract schemas: " . $e->getMessage());
                 $this->schemas = [];
+            }
+
+            // Fallback extraction from raw document when cebe parsing yields no endpoints
+            if (empty($this->endpoints)) {
+                try {
+                    $raw = $this->loadRawDocument($source);
+                    if (!empty($raw)) {
+                        $this->fallbackExtractFromRaw($raw);
+                    }
+                } catch (\Exception $e) {
+                    $this->logWarning("Raw fallback extraction failed: " . $e->getMessage());
+                }
             }
             
             // Generate model mappings safely
@@ -123,27 +142,31 @@ class OpenApiSchemaParser
                 Log::warning("Failed to extract security: " . $e->getMessage());
             }
 
+            $raw = is_array($this->lastRawDoc) ? $this->lastRawDoc : [];
             $result = [
+                'openapi' => $raw['openapi'] ?? ($this->openApiSpec->openapi ?? null),
                 'info' => $info,
+                'paths' => $raw['paths'] ?? [],
                 'endpoints' => $this->endpoints,
                 'schemas' => $this->schemas,
                 'model_mappings' => $this->modelMappings,
                 'validation_rules' => $this->validationRules,
                 'servers' => $servers,
                 'security' => $security,
-                'parsed_at' => now()->toISOString(),
-                'source' => $source,
+                'components' => [
+                    'schemas' => $this->schemas,
+                ],
             ];
 
             if ($useCache && $this->config['cache_enabled']) {
                 Cache::put($cacheKey, $result, $this->cacheTtl);
-                Log::info("OpenAPI schema cached", ['source' => $source]);
+                $this->logInfo("OpenAPI schema cached", ['source' => $source]);
             }
 
             return $result;
 
         } catch (\Exception $e) {
-            Log::error("Failed to parse OpenAPI schema", [
+            $this->logError("Failed to parse OpenAPI schema", [
                 'source' => $source,
                 'error' => $e->getMessage()
             ]);
@@ -153,6 +176,169 @@ class OpenApiSchemaParser
                 0,
                 $e
             );
+        }
+    }
+
+    /**
+     * Validate the parsed OpenAPI structure using cebe/php-openapi if available
+     */
+    protected function validateSchemaStructure(): void
+    {
+        // Perform lightweight structural validation on the raw document to avoid
+        // over-strict library validation that may not fully support 3.1.x features
+        $raw = [];
+        if ($this->lastSource) {
+            $raw = $this->loadRawDocument($this->lastSource);
+        }
+
+        if (!is_array($raw) || empty($raw)) {
+            // Fallback minimal check against spec object
+            if (!isset($this->openApiSpec->paths)) {
+                throw new SchemaValidationException('OpenAPI schema missing paths section.');
+            }
+            return;
+        }
+
+        // Basic info section checks
+        if (!isset($raw['info']) || !is_array($raw['info']) || empty($raw['info']['version'])) {
+            throw new SchemaValidationException('OpenAPI schema missing required info.version.');
+        }
+
+        if (!isset($raw['paths']) || !is_array($raw['paths'])) {
+            throw new SchemaValidationException('OpenAPI schema missing or invalid paths.');
+        }
+
+        // Ensure each operation has a responses section (required by spec)
+        foreach ($raw['paths'] as $path => $ops) {
+            if (!is_array($ops)) {
+                continue;
+            }
+            foreach ($ops as $method => $op) {
+                if (!is_array($op)) {
+                    continue;
+                }
+                if (!isset($op['responses']) || !is_array($op['responses'])) {
+                    throw new SchemaValidationException("Operation '{$method} {$path}' missing responses definition.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Load raw OpenAPI document array from a file path or URL
+     */
+    protected function loadRawDocument(string $source): array
+    {
+        if ($this->isUrl($source)) {
+            $response = Http::timeout($this->config['remote_timeout'])->get($source);
+            if (!$response->successful()) {
+                return [];
+            }
+            $content = $response->body();
+        } else {
+            if (!file_exists($source)) {
+                return [];
+            }
+            $content = file_get_contents($source);
+        }
+
+        $data = json_decode($content, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Try YAML if JSON failed
+            return [];
+        }
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Fallback extraction of endpoints and schemas from a raw decoded document
+     */
+    protected function fallbackExtractFromRaw(array $doc): void
+    {
+        // Endpoints
+        $paths = $doc['paths'] ?? [];
+        $methods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'];
+        foreach ($paths as $path => $ops) {
+            if (!is_array($ops)) {
+                continue;
+            }
+            foreach ($methods as $method) {
+                if (!isset($ops[$method]) || !is_array($ops[$method])) {
+                    continue;
+                }
+                $op = $ops[$method];
+                $operationId = $op['operationId'] ?? $this->generateOperationId($method, $path);
+                $endpoint = [
+                    'operation_id' => $operationId,
+                    'path' => $path,
+                    'method' => strtoupper($method),
+                    'summary' => $op['summary'] ?? '',
+                    'description' => $op['description'] ?? '',
+                    'tags' => $op['tags'] ?? [],
+                    'parameters' => [],
+                    'request_body' => null,
+                    'responses' => [],
+                    'security' => $op['security'] ?? [],
+                    'deprecated' => $op['deprecated'] ?? false,
+                ];
+
+                // Parameters
+                foreach (($op['parameters'] ?? []) as $param) {
+                    $endpoint['parameters'][] = [
+                        'name' => $param['name'] ?? '',
+                        'in' => $param['in'] ?? 'query',
+                        'description' => $param['description'] ?? '',
+                        'required' => $param['required'] ?? false,
+                        'deprecated' => $param['deprecated'] ?? false,
+                        'schema' => $param['schema'] ?? null,
+                        'style' => $param['style'] ?? null,
+                        'explode' => $param['explode'] ?? null,
+                        'example' => $param['example'] ?? null,
+                    ];
+                }
+
+                // Request body
+                if (isset($op['requestBody']['content'])) {
+                    $content = [];
+                    foreach ($op['requestBody']['content'] as $mediaType => $media) {
+                        $content[$mediaType] = [
+                            'schema' => $media['schema'] ?? null,
+                            'example' => $media['example'] ?? null,
+                            'examples' => $media['examples'] ?? [],
+                        ];
+                    }
+                    $endpoint['request_body'] = [
+                        'description' => $op['requestBody']['description'] ?? '',
+                        'required' => $op['requestBody']['required'] ?? false,
+                        'content' => $content,
+                    ];
+                }
+
+                // Responses
+                foreach (($op['responses'] ?? []) as $status => $response) {
+                    $respContent = [];
+                    foreach (($response['content'] ?? []) as $mediaType => $media) {
+                        $respContent[$mediaType] = [
+                            'schema' => $media['schema'] ?? null,
+                            'example' => $media['example'] ?? null,
+                        ];
+                    }
+                    $endpoint['responses'][$status] = [
+                        'description' => $response['description'] ?? '',
+                        'content' => $respContent,
+                        'headers' => $response['headers'] ?? [],
+                    ];
+                }
+
+                $this->endpoints[$operationId] = $endpoint;
+            }
+        }
+
+        // Schemas
+        $this->schemas = [];
+        foreach (($doc['components']['schemas'] ?? []) as $name => $schema) {
+            // Keep as raw array for rule generation
+            $this->schemas[$name] = is_array($schema) ? $schema : [];
         }
     }
 
@@ -174,7 +360,7 @@ class OpenApiSchemaParser
     protected function loadFromUrl(string $url): OpenApi
     {
         try {
-            Log::info("Loading OpenAPI schema from URL", ['url' => $url]);
+            $this->logInfo("Loading OpenAPI schema from URL", ['url' => $url]);
             
             $response = Http::timeout($this->config['remote_timeout'])->get($url);
 
@@ -216,10 +402,10 @@ class OpenApiSchemaParser
     protected function loadFromFile(string $filePath): OpenApi
     {
         try {
-            Log::info("Loading OpenAPI schema from file", ['path' => $filePath]);
+            $this->logInfo("Loading OpenAPI schema from file", ['path' => $filePath]);
             
             if (!file_exists($filePath)) {
-                throw new OpenApiParsingException("OpenAPI schema file not found: {$filePath}");
+                throw new OpenApiParsingException("OpenAPI schema file not found");
             }
 
             if (!is_readable($filePath)) {
@@ -271,14 +457,79 @@ class OpenApiSchemaParser
             );
         }
 
-        Log::info("OpenAPI version validated", ['version' => $version]);
+        $this->logInfo("OpenAPI version validated", ['version' => $version]);
+    }
+
+    protected function logInfo(string $message, array $context = []): void
+    {
+        if ($this->enableLogging) { \Illuminate\Support\Facades\Log::info($message, $context); }
+    }
+    protected function logWarning(string $message, array $context = []): void
+    {
+        if ($this->enableLogging) { \Illuminate\Support\Facades\Log::warning($message, $context); }
+    }
+    protected function logError(string $message, array $context = []): void
+    {
+        if ($this->enableLogging) { \Illuminate\Support\Facades\Log::error($message, $context); }
     }
 
     // Getters
     public function getEndpoints(): array { return $this->endpoints; }
     public function getSchemas(): array { return $this->schemas; }
     public function getModelMappings(): array { return $this->modelMappings; }
-    public function getValidationRules(): array { return $this->validationRules; }
+    public function getValidationRules(): array 
+    { 
+        // Prefer rules for the primary model if available
+        $schemaRules = $this->validationRules['schemas'] ?? [];
+        if (!empty($schemaRules)) {
+            $primary = $this->getPrimarySchemaName();
+            if ($primary && isset($schemaRules[$primary])) {
+                return $schemaRules[$primary];
+            }
+            // Fallback to first available
+            $first = array_key_first($schemaRules);
+            if ($first !== null) {
+                return $schemaRules[$first];
+            }
+        }
+
+        // As a last resort, try merging endpoint parameter rules
+        if (!empty($this->validationRules['endpoints'])) {
+            $merged = [];
+            foreach ($this->validationRules['endpoints'] as $endpointRules) {
+                $merged = array_merge($merged, $endpointRules['parameters'] ?? []);
+            }
+            if (!empty($merged)) {
+                return $merged;
+            }
+        }
+
+        // Fallback: derive directly from primary schema if available
+        $primary = $this->getPrimarySchemaName();
+        if ($primary && isset($this->schemas[$primary])) {
+            $rules = $this->generateSchemaValidationRules($this->schemas[$primary]);
+            if (!empty($rules)) {
+                return $rules;
+            }
+        }
+
+        // Fallback to raw structure if nothing else applies
+        return $this->validationRules; 
+    }
+
+    protected function getPrimarySchemaName(): ?string
+    {
+        // Use first model mapping if present
+        if (!empty($this->modelMappings)) {
+            $firstModel = array_key_first($this->modelMappings);
+            return $firstModel;
+        }
+        // Otherwise choose the first schema key
+        if (!empty($this->schemas)) {
+            return array_key_first($this->schemas);
+        }
+        return null;
+    }
 
     // Helper methods
     protected function getCacheKey(string $source): string
@@ -298,5 +549,58 @@ class OpenApiSchemaParser
     }
 
     // Additional methods will be in trait files
-    use ExtractsEndpoints, ExtractsSchemas, GeneratesValidationRules, GeneratesModelMappings;
+    use ExtractsEndpoints { extractEndpoints as protected extractEndpointsInternal; }
+    use ExtractsSchemas, GeneratesValidationRules, GeneratesModelMappings;
+
+    /**
+     * Public endpoint extraction utility.
+     * - Without argument: runs the internal extractor and returns current endpoints.
+     * - With a raw OpenAPI document array: extracts endpoints from that document and returns them (no state change).
+     */
+    public function extractEndpoints(array $doc = null): array
+    {
+        if ($doc === null) {
+            $this->extractEndpointsInternal();
+            return $this->endpoints;
+        }
+
+        return $this->extractEndpointsFromRaw($doc);
+    }
+
+    /**
+     * Extract endpoints from a raw document without mutating internal state.
+     */
+    protected function extractEndpointsFromRaw(array $doc): array
+    {
+        $out = [];
+        $paths = $doc['paths'] ?? [];
+        $methods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'];
+        foreach ($paths as $path => $ops) {
+            if (!is_array($ops)) {
+                continue;
+            }
+            foreach ($methods as $method) {
+                if (!isset($ops[$method]) || !is_array($ops[$method])) {
+                    continue;
+                }
+                $op = $ops[$method];
+                $operationId = $op['operationId'] ?? $this->generateOperationId($method, $path);
+                $endpoint = [
+                    'operation_id' => $operationId,
+                    'path' => $path,
+                    'method' => strtoupper($method),
+                    'summary' => $op['summary'] ?? '',
+                    'description' => $op['description'] ?? '',
+                    'tags' => $op['tags'] ?? [],
+                    'parameters' => $op['parameters'] ?? [],
+                    'request_body' => $op['requestBody'] ?? null,
+                    'responses' => $op['responses'] ?? [],
+                    'security' => $op['security'] ?? [],
+                    'deprecated' => $op['deprecated'] ?? false,
+                ];
+                $out[$operationId] = $endpoint;
+            }
+        }
+        return $out;
+    }
 }

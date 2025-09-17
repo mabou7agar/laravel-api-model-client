@@ -2,7 +2,6 @@
 
 namespace MTechStack\LaravelApiModelClient\OpenApi\Traits;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -54,7 +53,7 @@ trait GeneratesModelMappings
         // Generate relationships between models
         $this->generateModelRelationships();
 
-        Log::info("Generated model mappings", ['count' => count($this->modelMappings)]);
+        $this->logInfo("Generated model mappings", ['count' => count($this->modelMappings)]);
     }
 
     /**

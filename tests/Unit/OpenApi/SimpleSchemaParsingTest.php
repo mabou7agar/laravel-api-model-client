@@ -52,7 +52,10 @@ class SimpleSchemaParsingTest extends OpenApiTestCase
             $this->assertArrayHasKey('endpoints', $result);
             $this->assertArrayHasKey('schemas', $result);
             $this->assertArrayHasKey('validation_rules', $result);
-            $this->assertArrayHasKey('source', $result);
+            $this->assertArrayHasKey('security', $result);
+            $this->assertArrayHasKey('servers', $result);
+            $this->assertArrayHasKey('model_mappings', $result);
+            $this->assertArrayHasKey('components', $result);
 
             // Verify info section
             $this->assertEquals('Test API', $result['info']['title']);

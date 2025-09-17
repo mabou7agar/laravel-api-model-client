@@ -52,7 +52,7 @@ class SchemaFixtureManager
     {
         $schemaPath = $this->getSchemaPath($name);
         $content = json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        
+
         File::put($schemaPath, $content);
         $this->loadedSchemas[$name] = $schema;
     }
@@ -528,7 +528,7 @@ class SchemaFixtureManager
     /**
      * Get schema path for a given name
      */
-    protected function getSchemaPath(string $name): string
+    public function getSchemaPath(string $name): string
     {
         return $this->fixturesPath . '/schemas/' . $name . '.json';
     }
@@ -612,7 +612,7 @@ class SchemaFixtureManager
     protected function createLargeSchema(): array
     {
         $schema = $this->createPetstoreSchema();
-        
+
         // Add many paths and schemas
         for ($i = 1; $i <= 100; $i++) {
             $schema['paths']["/resource{$i}"] = [
@@ -630,7 +630,7 @@ class SchemaFixtureManager
                     ]
                 ]
             ];
-            
+
             $schema['components']['schemas']["Resource{$i}"] = [
                 'type' => 'object',
                 'properties' => [
@@ -640,7 +640,7 @@ class SchemaFixtureManager
                 ]
             ];
         }
-        
+
         return $schema;
     }
 

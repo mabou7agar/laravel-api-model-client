@@ -2,7 +2,6 @@
 
 namespace MTechStack\LaravelApiModelClient\OpenApi\Traits;
 
-use Illuminate\Support\Facades\Log;
 
 /**
  * Trait for generating Laravel validation rules from OpenAPI schemas
@@ -29,7 +28,7 @@ trait GeneratesValidationRules
             ];
         }
 
-        Log::info("Generated validation rules", [
+        $this->logInfo("Generated validation rules", [
             'schema_rules' => count($this->validationRules['schemas'] ?? []),
             'endpoint_rules' => count($this->validationRules['endpoints'] ?? [])
         ]);
@@ -180,7 +179,18 @@ trait GeneratesValidationRules
             }
         }
 
-        return array_unique($rules);
+        // De-duplicate scalar rules while preserving associative entries like '*' for array items
+        $assoc = [];
+        $scalars = [];
+        foreach ($rules as $key => $value) {
+            if (is_string($key)) {
+                $assoc[$key] = $value;
+            } elseif (is_string($value)) {
+                $scalars[] = $value;
+            }
+        }
+        $scalars = array_values(array_unique($scalars));
+        return array_merge($scalars, $assoc);
     }
 
     /**

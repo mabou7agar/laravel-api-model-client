@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use MTechStack\LaravelApiModelClient\Testing\ApiMockHandler;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 use Mockery;
 
@@ -26,12 +27,14 @@ class TestApiModel extends ApiModel
 
 class ApiModelTest extends TestCase
 {
+    protected ApiMockHandler $apiMock;
     protected function setUp(): void
     {
         parent::setUp();
         
-        // Mock HTTP client for testing
-        Http::fake();
+        // Activate API mock handler so model methods use the mock client
+        $this->apiMock = new ApiMockHandler();
+        $this->apiMock->activate();
     }
 
     /** @test */
@@ -187,9 +190,12 @@ class ApiModelTest extends TestCase
             ]
         ];
 
-        Http::fake([
-            'https://demo.bagisto.com/bagisto-api-demo-common/api/v1/test-products' => Http::response($mockResponse, 200)
-        ]);
+        foreach ([
+            'https://demo.bagisto.com/bagisto-api-demo-common/api/v1/test-products',
+            'api/v1/test-products',
+        ] as $url) {
+            $this->apiMock->mockGet($url, $mockResponse, 200);
+        }
 
         $products = TestApiModel::allFromApi();
 
@@ -216,9 +222,12 @@ class ApiModelTest extends TestCase
             ]
         ];
 
-        Http::fake([
-            'https://demo.bagisto.com/bagisto-api-demo-common/api/v1/test-products/566' => Http::response($mockResponse, 200)
-        ]);
+        foreach ([
+            'https://demo.bagisto.com/bagisto-api-demo-common/api/v1/test-products/566',
+            'api/v1/test-products/566',
+        ] as $url) {
+            $this->apiMock->mockGet($url, $mockResponse, 200);
+        }
 
         $product = TestApiModel::findFromApi(566);
 
@@ -231,9 +240,12 @@ class ApiModelTest extends TestCase
     /** @test */
     public function it_returns_null_when_find_from_api_fails()
     {
-        Http::fake([
-            'https://demo.bagisto.com/bagisto-api-demo-common/api/v1/test-products/999' => Http::response([], 404)
-        ]);
+        foreach ([
+            'https://demo.bagisto.com/bagisto-api-demo-common/api/v1/test-products/999',
+            'api/v1/test-products/999',
+        ] as $url) {
+            $this->apiMock->mockGet($url, [], 404);
+        }
 
         $product = TestApiModel::findFromApi(999);
 
@@ -289,6 +301,9 @@ class ApiModelTest extends TestCase
 
     protected function tearDown(): void
     {
+        if (isset($this->apiMock)) {
+            $this->apiMock->deactivate();
+        }
         Mockery::close();
         parent::tearDown();
     }

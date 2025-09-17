@@ -22,6 +22,7 @@ abstract class OpenApiTestCase extends TestCase
     protected PerformanceBenchmark $benchmark;
     protected OpenApiSchemaParser $parser;
     protected ConfigurationValidator $configValidator;
+    protected ValidationStrictnessManager $validationHelper;
 
     protected function setUp(): void
     {
@@ -127,6 +128,7 @@ abstract class OpenApiTestCase extends TestCase
     {
         $this->parser = new OpenApiSchemaParser();
         $this->configValidator = new ConfigurationValidator();
+        $this->validationHelper = new ValidationStrictnessManager('testing');
     }
 
     /**

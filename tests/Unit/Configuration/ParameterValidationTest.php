@@ -13,13 +13,13 @@ use Illuminate\Validation\ValidationException;
 class ParameterValidationTest extends OpenApiTestCase
 {
     protected ValidationStrictnessManager $strictnessManager;
-    protected ParameterValidationHelper $validationHelper;
+    protected ParameterValidationHelper $parameterValidationHelper;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->strictnessManager = new ValidationStrictnessManager('testing');
-        $this->validationHelper = new ParameterValidationHelper();
+        $this->parameterValidationHelper = new ParameterValidationHelper();
     }
 
     /**
@@ -31,7 +31,7 @@ class ParameterValidationTest extends OpenApiTestCase
         
         $schema = $this->createTestSchema();
         $petSchema = $schema['components']['schemas']['Pet'];
-        $rules = $this->validationHelper->generateLaravelRules($petSchema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($petSchema);
 
         // Valid data should pass
         $validData = [
@@ -66,7 +66,7 @@ class ParameterValidationTest extends OpenApiTestCase
         
         $schema = $this->createTestSchema();
         $petSchema = $schema['components']['schemas']['Pet'];
-        $rules = $this->validationHelper->generateLaravelRules($petSchema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($petSchema);
 
         // Data with minor issues should pass with warnings
         $dataWithMinorIssues = [
@@ -93,7 +93,7 @@ class ParameterValidationTest extends OpenApiTestCase
         
         $schema = $this->createTestSchema();
         $petSchema = $schema['components']['schemas']['Pet'];
-        $rules = $this->validationHelper->generateLaravelRules($petSchema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($petSchema);
 
         // Data with many issues should still pass with warnings
         $problematicData = [
@@ -150,8 +150,8 @@ class ParameterValidationTest extends OpenApiTestCase
         $schema = $this->createTestSchema();
         $petSchema = $schema['components']['schemas']['Pet'];
         
-        $testCases = $this->validationHelper->createValidationTestCases($petSchema);
-        $rules = $this->validationHelper->generateLaravelRules($petSchema);
+        $testCases = $this->parameterValidationHelper->createValidationTestCases($petSchema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($petSchema);
 
         $results = [];
         $totalTests = 0;
@@ -162,7 +162,7 @@ class ParameterValidationTest extends OpenApiTestCase
                 $totalTests++;
                 
                 $this->startBenchmark("validation_test_{$caseName}");
-                $result = $this->validationHelper->runValidationTestCase($testCase, $rules);
+                $result = $this->parameterValidationHelper->runValidationTestCase($testCase, $rules);
                 $benchmarkResult = $this->endBenchmark("validation_test_{$caseName}");
                 
                 $result['validation_time'] = $benchmarkResult['execution_time'];
@@ -174,7 +174,7 @@ class ParameterValidationTest extends OpenApiTestCase
             }
         }
 
-        $statistics = $this->validationHelper->getValidationStatistics($results);
+        $statistics = $this->parameterValidationHelper->getValidationStatistics($results);
         
         $this->assertGreaterThan(0, $totalTests);
         $this->assertGreaterThanOrEqual(0.8, $statistics['success_rate'] / 100, 
@@ -207,7 +207,7 @@ class ParameterValidationTest extends OpenApiTestCase
             'required' => ['count', 'name']
         ];
 
-        $rules = $this->validationHelper->generateLaravelRules($schema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($schema);
 
         // Test minimum boundary
         $minBoundaryData = ['count' => 1, 'name' => 'AB'];
@@ -249,7 +249,7 @@ class ParameterValidationTest extends OpenApiTestCase
             'required' => ['email']
         ];
 
-        $rules = $this->validationHelper->generateLaravelRules($schema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($schema);
 
         // Valid formats
         $validData = [
@@ -287,7 +287,7 @@ class ParameterValidationTest extends OpenApiTestCase
             'required' => ['status']
         ];
 
-        $rules = $this->validationHelper->generateLaravelRules($schema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($schema);
 
         // Valid enum values
         $validData = ['status' => 'active', 'priority' => 3];
@@ -390,7 +390,7 @@ class ParameterValidationTest extends OpenApiTestCase
     {
         $schema = $this->createTestSchema();
         $petSchema = $schema['components']['schemas']['Pet'];
-        $rules = $this->validationHelper->generateLaravelRules($petSchema);
+        $rules = $this->parameterValidationHelper->generateLaravelRules($petSchema);
 
         // Generate large dataset
         $largeDataset = [];
@@ -437,7 +437,7 @@ class ParameterValidationTest extends OpenApiTestCase
             'unknown_field' => 'value' // Unknown field
         ];
 
-        $results = $this->validationHelper->testValidationStrictness($problematicData, $rules);
+        $results = $this->parameterValidationHelper->testValidationStrictness($problematicData, $rules);
 
         // Strict should fail
         $this->assertFalse($results['strict']['passed']);

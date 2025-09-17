@@ -166,6 +166,13 @@ class ValidationStrictnessManager
         $validationConfig = $this->schemaConfig['validation'] ?? [];
         $warnings = [];
 
+        // Check for unknown properties and add warnings
+        $knownFields = array_keys($rules);
+        $unknownFields = array_diff(array_keys($data), $knownFields);
+        foreach ($unknownFields as $field) {
+            $warnings[] = "Unknown field '{$field}' provided";
+        }
+
         // Auto-cast types if enabled
         if ($validationConfig['auto_cast_types'] ?? true) {
             $data = $this->autoCastTypes($data, $rules);

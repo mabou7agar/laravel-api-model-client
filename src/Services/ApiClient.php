@@ -5,8 +5,7 @@ namespace MTechStack\LaravelApiModelClient\Services;
 use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
 use MTechStack\LaravelApiModelClient\Contracts\AuthStrategyInterface;
 use MTechStack\LaravelApiModelClient\Exceptions\ApiException;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ApiClient implements ApiClientInterface
@@ -16,7 +15,7 @@ class ApiClient implements ApiClientInterface
      *
      * @var \GuzzleHttp\Client
      */
-    protected $httpClient;
+    // Using Laravel HTTP client; no explicit client instance needed
 
     /**
      * The base URL for API requests.
@@ -48,10 +47,6 @@ class ApiClient implements ApiClientInterface
     public function __construct(array $config = [])
     {
         $this->config = $config;
-        $this->httpClient = new Client([
-            'timeout' => $config['client']['timeout'] ?? 30,
-            'connect_timeout' => $config['client']['connect_timeout'] ?? 10,
-        ]);
     }
 
     /**
@@ -180,21 +175,52 @@ class ApiClient implements ApiClientInterface
         // Log the request if debugging is enabled
         $this->logRequest($method, $url, $options);
 
-        try {
-            // Send the request
-            $response = $this->httpClient->request($method, $url, $options);
+        // Prepare the Laravel HTTP client with timeouts and headers
+        $timeout = $this->config['client']['timeout'] ?? 30;
+        $connectTimeout = $this->config['client']['connect_timeout'] ?? 10;
+        $headers = $this->prepareHeaders($options['headers'] ?? []);
 
-            // Parse the response
-            $contents = $response->getBody()->getContents();
-            $data = json_decode($contents, true);
+        $client = Http::withHeaders($headers)
+            ->timeout($timeout)
+            ->connectTimeout($connectTimeout);
 
-            // Log the response if debugging is enabled
+        // Send the request based on method
+        $response = match (strtoupper($method)) {
+            'GET' => $client->get($url, $options['query'] ?? []),
+            'DELETE' => $client->delete($url, $options['query'] ?? []),
+            'POST' => $client->post($url, $options['json'] ?? []),
+            'PUT' => $client->put($url, $options['json'] ?? []),
+            'PATCH' => $client->patch($url, $options['json'] ?? []),
+            default => $client->send($method, $url, $options),
+        };
+
+        if ($response->successful()) {
+            $data = $response->json();
             $this->logResponse($data);
-
             return $data;
-        } catch (RequestException $e) {
-            return $this->handleRequestException($e, $method, $url);
         }
+
+        // Map Laravel HTTP error into ApiException handling path
+        $status = $response->status();
+        if ($this->config['error_handling']['log_errors'] ?? true) {
+            Log::error('API request failed', [
+                'method' => $method,
+                'url' => $url,
+                'status_code' => $status,
+                'body' => $response->body(),
+            ]);
+        }
+
+        if ($this->config['error_handling']['throw_exceptions'] ?? true) {
+            throw new \MTechStack\LaravelApiModelClient\Exceptions\ApiException(
+                'API request failed with status ' . $status,
+                $status,
+                null,
+                $response->json()
+            );
+        }
+
+        return [];
     }
 
     /**
@@ -205,11 +231,19 @@ class ApiClient implements ApiClientInterface
      */
     protected function buildUrl(string $endpoint)
     {
-        if ($this->baseUrl === null) {
+        $base = $this->baseUrl;
+        if ($base === null) {
+            // Also honor flat config base_url used in tests
+            $base = $this->config['base_url'] ?? null;
+        }
+        if ($base === null) {
+            // Last resort: read from global config at runtime
+            $base = config('api-model-client.client.base_url') ?? config('api-model-client.base_url');
+        }
+        if ($base === null) {
             return $endpoint;
         }
-
-        return $this->baseUrl . '/' . ltrim($endpoint, '/');
+        return rtrim($base, '/') . '/' . ltrim($endpoint, '/');
     }
 
     /**

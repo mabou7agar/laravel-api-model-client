@@ -58,6 +58,21 @@ class OpenApiQueryBuilderTest extends TestCase
                 '/pets' => [
                     'get' => [
                         'operationId' => 'listPets',
+                        'responses' => [
+                            '200' => [
+                                'description' => 'A list of pets',
+                                'content' => [
+                                    'application/json' => [
+                                        'schema' => [
+                                            'type' => 'array',
+                                            'items' => [
+                                                '$ref' => '#/components/schemas/Pet'
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ],
                         'parameters' => [
                             [
                                 'name' => 'limit',
@@ -114,6 +129,11 @@ class OpenApiQueryBuilderTest extends TestCase
                                 'name' => 'price_max',
                                 'in' => 'query',
                                 'schema' => ['type' => 'number', 'minimum' => 0]
+                            ],
+                            [
+                                'name' => 'age',
+                                'in' => 'query',
+                                'schema' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 30]
                             ]
                         ]
                     ]
@@ -355,6 +375,13 @@ class OpenApiQueryBuilderTest extends TestCase
     public function it_validates_integer_constraints()
     {
         $query = $this->testModel->newQuery();
+        
+        // Debug: Check if schema is loaded
+        $this->assertTrue($this->testModel->hasOpenApiSchema(), 'Model should have OpenAPI schema');
+        
+        // Debug: Check if age parameter definition exists
+        $ageDefinition = $this->testModel->getOpenApiParameterDefinition('age');
+        $this->assertNotNull($ageDefinition, 'Age parameter should be defined in OpenAPI schema');
         
         // Valid integer within range
         $query->whereOpenApi('age', '=', 5);

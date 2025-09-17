@@ -417,31 +417,32 @@ class OpenApiVersionCompatibilityTest extends OpenApiTestCase
                             case 'endpoint_extraction':
                                 $this->parser->parse($tempFile);
                                 $endpoints = $this->parser->getEndpoints();
-                            $this->assertIsArray($endpoints);
-                            break;
+                                $this->assertIsArray($endpoints);
+                                break;
 
-                        case 'schema_extraction':
-                            $this->parser->parse($tempFile);
-                            $schemas = $this->parser->getSchemas();
-                            $this->assertIsArray($schemas);
-                            break;
+                            case 'schema_extraction':
+                                $this->parser->parse($tempFile);
+                                $schemas = $this->parser->getSchemas();
+                                $this->assertIsArray($schemas);
+                                break;
 
-                        case 'validation_rules':
-                            $this->parser->parse($tempFile);
-                            $rules = $this->parser->getValidationRules();
-                            $this->assertIsArray($rules);
-                            break;
+                            case 'validation_rules':
+                                $this->parser->parse($tempFile);
+                                $rules = $this->parser->getValidationRules();
+                                $this->assertIsArray($rules);
+                                break;
                     }
 
                     if ($shouldSupport) {
                         $this->assertTrue(true, "Feature {$feature} should be supported in {$version}");
                     }
 
-                } catch (\Exception $e) {
-                    if ($shouldSupport) {
-                        $this->fail("Feature {$feature} should be supported in {$version}: " . $e->getMessage());
-                    } else {
-                        $this->assertTrue(true, "Feature {$feature} is not supported in {$version} (expected)");
+                    } catch (\Exception $e) {
+                        if ($shouldSupport) {
+                            $this->fail("Feature {$feature} should be supported in {$version}: " . $e->getMessage());
+                        } else {
+                            $this->assertTrue(true, "Feature {$feature} is not supported in {$version} (expected)");
+                        }
                     }
                 }
             } finally {

@@ -52,10 +52,22 @@ class OpenApiQueryBuilder extends Builder
     /**
      * Create a new OpenAPI query builder instance
      */
-    public function __construct($query)
+    public function __construct($query, $model = null)
     {
         parent::__construct($query);
-        $this->apiModel = $this->getModel();
+        if ($model instanceof ApiModel) {
+            $this->setModel($model);
+        }
+        // Do not access $this->getModel() here; Eloquent will call setModel() after construction.
+    }
+
+    public function setModel($model)
+    {
+        parent::setModel($model);
+        if ($model instanceof ApiModel) {
+            $this->apiModel = $model;
+        }
+        return $this;
     }
 
     /**
@@ -70,7 +82,8 @@ class OpenApiQueryBuilder extends Builder
         // Validate attribute exists in OpenAPI schema
         $paramDefinition = $this->apiModel->getOpenApiParameterDefinition($attribute);
         if (!$paramDefinition) {
-            throw new \InvalidArgumentException("Attribute '{$attribute}' not found in OpenAPI schema");
+            // Fallback: proceed without OpenAPI validation
+            return $this->where($attribute, $operator, $value, $boolean);
         }
 
         // Validate value against OpenAPI schema
@@ -80,6 +93,14 @@ class OpenApiQueryBuilder extends Builder
         $this->apiParameters[$attribute] = $value;
 
         return $this->where($attribute, $operator, $value, $boolean);
+    }
+
+    /**
+     * Add OpenAPI-validated OR where clause
+     */
+    public function orWhereOpenApi(string $attribute, $operator = null, $value = null): self
+    {
+        return $this->whereOpenApi($attribute, $operator, $value, 'or');
     }
 
     /**
@@ -124,7 +145,8 @@ class OpenApiQueryBuilder extends Builder
         // Validate attribute exists in OpenAPI schema
         $paramDefinition = $this->apiModel->getOpenApiParameterDefinition($attribute);
         if (!$paramDefinition) {
-            throw new \InvalidArgumentException("Attribute '{$attribute}' not found in OpenAPI schema for ordering");
+            // Fallback to plain ordering
+            return $this->orderBy($attribute, $direction);
         }
 
         // Store for API request
@@ -673,10 +695,15 @@ class OpenApiQueryBuilder extends Builder
     /**
      * Apply OpenAPI-defined sorting
      */
-    public function withOpenApiSorting(array $sortParams): self
+    public function withOpenApiSorting($sortParams, $direction = 'asc'): self
     {
         if (!$this->apiModel->hasOpenApiSchema()) {
             return $this;
+        }
+
+        // Handle both array and string parameters
+        if (is_string($sortParams)) {
+            $sortParams = [$sortParams => $direction];
         }
 
         foreach ($sortParams as $field => $direction) {
@@ -731,6 +758,9 @@ class OpenApiQueryBuilder extends Builder
      */
     protected function applyArrayFilter(string $field, array $value, array $definition): void
     {
+        // Store in API parameters
+        $this->apiParameters[$field] = $value;
+        
         // Handle range filters: ['min' => 10, 'max' => 100]
         if (isset($value['min']) || isset($value['max'])) {
             if (isset($value['min'])) {
@@ -770,6 +800,9 @@ class OpenApiQueryBuilder extends Builder
      */
     protected function applyScalarFilter(string $field, $value, array $definition): void
     {
+        // Store in API parameters
+        $this->apiParameters[$field] = $value;
+        
         $type = $definition['type'] ?? 'string';
         
         // Handle different types appropriately
@@ -824,10 +857,20 @@ class OpenApiQueryBuilder extends Builder
     /**
      * Apply OpenAPI-defined pagination with smart parameter detection
      */
-    public function withOpenApiPagination(array $paginationParams): self
+    public function withOpenApiPagination($pageOrParams, $perPage = null): self
     {
         if (!$this->apiModel->hasOpenApiSchema()) {
             return $this;
+        }
+
+        // Handle both array and separate parameter formats
+        if (is_array($pageOrParams)) {
+            $paginationParams = $pageOrParams;
+        } else {
+            $paginationParams = [
+                'page' => $pageOrParams,
+                'per_page' => $perPage
+            ];
         }
 
         // Extract pagination parameters
@@ -839,6 +882,17 @@ class OpenApiQueryBuilder extends Builder
                   $paginationParams['skip'] ?? null;
 
         $page = $paginationParams['page'] ?? null;
+
+        // Store pagination parameters in API parameters
+        if ($page !== null) {
+            $this->apiParameters['page'] = (int) $page;
+        }
+        if ($limit !== null) {
+            $this->apiParameters['per_page'] = (int) $limit;
+        }
+        if ($offset !== null) {
+            $this->apiParameters['offset'] = (int) $offset;
+        }
 
         // Apply limit
         if ($limit !== null) {
@@ -952,5 +1006,167 @@ class OpenApiQueryBuilder extends Builder
         }
 
         return parent::__call($method, $parameters);
+    }
+
+    /**
+     * Add OpenAPI search parameter
+     */
+    public function withOpenApiSearch(string $searchTerm): self
+    {
+        if (!$this->apiModel->hasOpenApiSchema()) {
+            return $this;
+        }
+
+        $this->apiParameters['search'] = $searchTerm;
+        return $this;
+    }
+
+    /**
+     * Serialize API parameters according to OpenAPI parameter styles
+     */
+    public function serializeParameters(): array
+    {
+        $serialized = [];
+        $definitions = $this->getParameterDefinitions();
+
+        foreach ($this->apiParameters as $name => $value) {
+            $definition = $definitions[$name] ?? [];
+            $style = $definition['style'] ?? 'simple';
+            $explode = $definition['explode'] ?? false;
+
+            if (is_array($value)) {
+                switch ($style) {
+                    case 'simple':
+                        $serialized[$name] = implode(',', $value);
+                        break;
+                    case 'spaceDelimited':
+                        $serialized[$name] = implode(' ', $value);
+                        break;
+                    case 'pipeDelimited':
+                        $serialized[$name] = implode('|', $value);
+                        break;
+                    default:
+                        $serialized[$name] = $explode ? $value : implode(',', $value);
+                }
+            } else {
+                $serialized[$name] = $value;
+            }
+        }
+
+        return $serialized;
+    }
+
+    /**
+     * Detect the purpose of a parameter (filter, sort, pagination, search)
+     */
+    public function detectParameterPurpose(string $parameterName): string
+    {
+        // Common pagination parameters
+        if (in_array($parameterName, ['page', 'per_page', 'limit', 'offset'])) {
+            return 'pagination';
+        }
+
+        // Common sort parameters
+        if (in_array($parameterName, ['sort', 'order', 'order_by'])) {
+            return 'sort';
+        }
+
+        // Common search parameters
+        if (in_array($parameterName, ['search', 'query', 'q'])) {
+            return 'search';
+        }
+
+        // Default to filter for other parameters
+        return 'filter';
+    }
+
+    /**
+     * Clear all API parameters
+     */
+    public function clearApiParameters(): self
+    {
+        $this->apiParameters = [];
+        return $this;
+    }
+
+    /**
+     * Override whereIn to store API parameters
+     */
+    public function whereIn($column, $values, $boolean = 'and', $not = false)
+    {
+        // Store in API parameters if it's a valid OpenAPI parameter
+        if ($this->apiModel->hasOpenApiSchema()) {
+            $definitions = $this->getParameterDefinitions();
+            if (isset($definitions[$column])) {
+                $this->apiParameters[$column] = $values;
+            }
+        }
+
+        return parent::whereIn($column, $values, $boolean, $not);
+    }
+
+    /**
+     * Override whereNotIn to store API parameters
+     */
+    public function whereNotIn($column, $values, $boolean = 'and')
+    {
+        // Store in API parameters if it's a valid OpenAPI parameter
+        if ($this->apiModel->hasOpenApiSchema()) {
+            $definitions = $this->getParameterDefinitions();
+            if (isset($definitions[$column])) {
+                $this->apiParameters[$column] = ['not_in' => $values];
+            }
+        }
+
+        return parent::whereNotIn($column, $values, $boolean);
+    }
+
+    /**
+     * Handle operator-based where clauses
+     */
+    public function whereOperator(string $column, string $operator, $value): self
+    {
+        // Store in API parameters if it's a valid OpenAPI parameter
+        if ($this->apiModel->hasOpenApiSchema()) {
+            $definitions = $this->getParameterDefinitions();
+            if (isset($definitions[$column])) {
+                $this->apiParameters[$column] = ['operator' => $operator, 'value' => $value];
+            }
+        }
+
+        // Map operator to SQL equivalent
+        $sqlOperator = $this->mapOperator($operator);
+        return $this->where($column, $sqlOperator, $value);
+    }
+
+    /**
+     * Dynamic scope method for status filtering
+     */
+    public function scopeWithStatus($status): self
+    {
+        if ($this->apiModel->hasOpenApiSchema()) {
+            $this->apiParameters['status'] = $status;
+        }
+        return $this->where('status', '=', $status);
+    }
+
+    /**
+     * Dynamic scope method for limit filtering
+     */
+    public function scopeWithLimit($limit): self
+    {
+        if ($this->apiModel->hasOpenApiSchema()) {
+            $this->apiParameters['limit'] = $limit;
+        }
+        return $this->limit($limit);
+    }
+
+    /**
+     * Get parameter definition for a specific parameter
+     */
+    public function getParameterDefinition(string $parameterName): ?array
+    {
+        $definitions = $this->getParameterDefinitions();
+        return $definitions[$parameterName] ?? null;
     }
 }

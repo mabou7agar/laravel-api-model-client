@@ -49,6 +49,13 @@ class OpenApiParameterSerializer
             return null;
         }
         
+        // Auto-detect arrays and objects if type not explicitly set
+        if ($type === 'string' && is_array($value)) {
+            $type = 'array';
+        } elseif ($type === 'string' && is_object($value)) {
+            $type = 'object';
+        }
+        
         // Convert type first
         $convertedValue = self::convertType($value, $type, $format);
         
@@ -177,9 +184,9 @@ class OpenApiParameterSerializer
             return self::formatDate(Carbon::instance($value), $format);
         }
         
-        // Handle arrays - should not be converted to string here
+        // Handle arrays - should not be converted to string here, return null
         if (is_array($value)) {
-            return $value;
+            return null;
         }
         
         return (string) $value;

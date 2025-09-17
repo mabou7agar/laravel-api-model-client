@@ -4,7 +4,6 @@ namespace MTechStack\LaravelApiModelClient\OpenApi\Traits;
 
 use cebe\openapi\spec\Schema;
 use cebe\openapi\spec\Reference;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Trait for extracting schema information from OpenAPI specifications
@@ -19,7 +18,7 @@ trait ExtractsSchemas
         $this->schemas = [];
 
         if (!$this->openApiSpec->components || !$this->openApiSpec->components->schemas) {
-            Log::info("No component schemas found in OpenAPI specification");
+            $this->logInfo("No component schemas found in OpenAPI specification");
             return;
         }
 
@@ -27,7 +26,7 @@ trait ExtractsSchemas
             $this->schemas[$schemaName] = $this->extractSchemaInfo($schema);
         }
 
-        Log::info("Extracted schemas", ['count' => count($this->schemas)]);
+        $this->logInfo("Extracted schemas", ['count' => count($this->schemas)]);
     }
 
     /**

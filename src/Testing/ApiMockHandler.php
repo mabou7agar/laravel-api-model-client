@@ -59,7 +59,12 @@ class ApiMockHandler
             
             // Replace with our mock client
             App::singleton('api-client', function () {
-                return new MockApiClient($this);
+                $client = new MockApiClient($this);
+                $base = config('api-model-client.client.base_url') ?? config('api-model-client.base_url');
+                if ($base) {
+                    $client->setBaseUrl($base);
+                }
+                return $client;
             });
             
             $this->active = true;

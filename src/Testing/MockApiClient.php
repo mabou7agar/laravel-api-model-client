@@ -165,12 +165,17 @@ class MockApiClient implements ApiClientInterface
             $options = $this->authStrategy->applyToRequest($options);
         }
 
+        // Build full URL if base URL is set to match exact fakes
+        $fullEndpoint = $this->baseUrl
+            ? rtrim($this->baseUrl, '/') . '/' . ltrim($endpoint, '/')
+            : $endpoint;
+
         // Get the mocked response
-        $mockResponse = $this->mockHandler->getResponse($method, $endpoint, $options);
+        $mockResponse = $this->mockHandler->getResponse($method, $fullEndpoint, $options);
         
         if ($mockResponse === null) {
             throw new ApiException(
-                "No mock response found for {$method} request to {$endpoint}",
+                "No mock response found for {$method} request to {$fullEndpoint}",
                 404
             );
         }
