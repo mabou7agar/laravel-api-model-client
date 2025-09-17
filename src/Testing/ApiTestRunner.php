@@ -25,7 +25,7 @@ class ApiTestRunner
     public function testModels(array $models, ?string $schema, bool $dryRun): array
     {
         $results = [];
-        
+
         if (empty($models)) {
             $models = $this->discoverModels($schema);
         }
@@ -57,7 +57,7 @@ class ApiTestRunner
     public function testEndpoints(array $endpoints, ?string $schema, int $timeout, bool $dryRun): array
     {
         $results = [];
-        
+
         if (empty($endpoints)) {
             $endpoints = $this->discoverEndpoints($schema);
         }
@@ -109,7 +109,7 @@ class ApiTestRunner
     {
         try {
             $modelClass = $this->getModelClass($modelName);
-            
+
             if (!class_exists($modelClass)) {
                 return [
                     'success' => false,
@@ -118,7 +118,7 @@ class ApiTestRunner
             }
 
             $model = new $modelClass();
-            
+
             if (!$model instanceof ApiModel) {
                 return [
                     'success' => false,
@@ -130,7 +130,7 @@ class ApiTestRunner
                 'success' => true,
                 'model_class' => $modelClass,
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -169,7 +169,7 @@ class ApiTestRunner
                 'success' => $success,
                 'tests' => $tests,
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -209,7 +209,7 @@ class ApiTestRunner
                 'success' => $success,
                 'tests' => $tests,
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -229,13 +229,13 @@ class ApiTestRunner
 
             $relationships = [];
             $reflection = new \ReflectionClass($model);
-            
+
             foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-                if ($method->getNumberOfParameters() === 0 && 
+                if ($method->getNumberOfParameters() === 0 &&
                     !in_array($method->getName(), ['getKey', 'getTable', 'getKeyName']) &&
                     !str_starts_with($method->getName(), 'get') &&
                     !str_starts_with($method->getName(), 'set')) {
-                    
+
                     try {
                         $result = $method->invoke($model);
                         if (is_object($result) && method_exists($result, 'getRelated')) {
@@ -255,7 +255,7 @@ class ApiTestRunner
                 'relationships_count' => count($relationships),
                 'relationships' => $relationships,
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -295,7 +295,7 @@ class ApiTestRunner
                 'success' => $success,
                 'tests' => $tests,
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -321,7 +321,7 @@ class ApiTestRunner
             // Test OpenAPI-specific methods
             if ($this->hasOpenApiTrait($model)) {
                 $tests['has_openapi_methods'] = method_exists($model, 'getOpenApiSchema');
-                
+
                 if (method_exists($model, 'whereOpenApi')) {
                     $tests['has_openapi_query_methods'] = true;
                 }
@@ -333,7 +333,7 @@ class ApiTestRunner
                 'success' => $success,
                 'tests' => $tests,
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -350,7 +350,7 @@ class ApiTestRunner
         try {
             $schemaConfig = $schema ? Config::get("api-client.schemas.{$schema}") : null;
             $baseUrl = $schemaConfig['base_url'] ?? Config::get('api-client.base_url');
-            
+
             if (!$baseUrl) {
                 return [
                     'success' => false,
@@ -362,11 +362,11 @@ class ApiTestRunner
             $headers = $this->getAuthHeaders($schemaConfig ?? []);
 
             $startTime = microtime(true);
-            
+
             $response = Http::timeout($timeout)
                 ->withHeaders($headers)
                 ->get($url);
-            
+
             $endTime = microtime(true);
             $responseTime = ($endTime - $startTime) * 1000;
 
@@ -378,7 +378,7 @@ class ApiTestRunner
                 'method' => 'GET',
                 'response_size' => strlen($response->body()),
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -394,7 +394,7 @@ class ApiTestRunner
     protected function discoverModels(?string $schema): array
     {
         $models = [];
-        
+
         // Try to discover from schema if available
         if ($schema) {
             $schemaConfig = Config::get("api-client.schemas.{$schema}");
@@ -407,12 +407,12 @@ class ApiTestRunner
                 }
             }
         }
-        
+
         // Fallback to common model names
         if (empty($models)) {
             $models = ['Pet', 'Category', 'Tag', 'User', 'Product', 'Order'];
         }
-        
+
         return $models;
     }
 
@@ -422,7 +422,7 @@ class ApiTestRunner
     protected function discoverEndpoints(?string $schema): array
     {
         $endpoints = [];
-        
+
         // Try to discover from schema if available
         if ($schema) {
             $schemaConfig = Config::get("api-client.schemas.{$schema}");
@@ -435,12 +435,12 @@ class ApiTestRunner
                 }
             }
         }
-        
+
         // Fallback to common endpoints
         if (empty($endpoints)) {
             $endpoints = ['/pets', '/categories', '/tags', '/users', '/products', '/orders'];
         }
-        
+
         return $endpoints;
     }
 
@@ -463,6 +463,9 @@ class ApiTestRunner
             }
         }
 
+        if(str_contains($modelName,'\\')){
+            return $modelName;
+        }
         // Default to App\Models\Api namespace
         return 'App\\Models\\Api\\' . $modelName;
     }
@@ -482,7 +485,7 @@ class ApiTestRunner
     protected function getAuthHeaders(array $schemaConfig): array
     {
         $auth = $schemaConfig['authentication'] ?? [];
-        
+
         switch ($auth['type'] ?? '') {
             case 'bearer':
                 return ['Authorization' => 'Bearer ' . ($auth['token'] ?? '')];
