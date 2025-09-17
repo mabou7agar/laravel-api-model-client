@@ -28,7 +28,7 @@ trait SyncWithApi
                         'exception' => $e->getMessage(),
                     ]);
                 }
-                
+
                 return $this;
             }
         }
@@ -73,13 +73,13 @@ trait SyncWithApi
             } else {
                 // Create new record
                 $response = $this->createInApi($apiData);
-                
+
                 // If the API returns an ID, set it on the model
                 if (isset($response[$this->getKeyName()])) {
                     $this->{$this->getKeyName()} = $response[$this->getKeyName()];
                 }
             }
-            
+
             return true;
         } catch (\Exception $e) {
             if (config('api-model-relations.error_handling.log_errors', true)) {
@@ -90,7 +90,7 @@ trait SyncWithApi
                     'exception' => $e->getMessage(),
                 ]);
             }
-            
+
             return false;
         }
     }
@@ -115,26 +115,26 @@ trait SyncWithApi
         try {
             // Get all records from API
             $apiRecords = $model->allFromApi();
-            
+
             // Index API records by primary key for easy lookup
             $apiRecordsById = [];
             $primaryKey = $model->getKeyName();
-            
+
             foreach ($apiRecords as $record) {
                 if (isset($record[$primaryKey])) {
                     $apiRecordsById[$record[$primaryKey]] = $record;
                 }
             }
-            
+
             // Get all local records
             $localRecords = $model->all();
             $processedIds = [];
-            
+
             // Update existing local records
             foreach ($localRecords as $localRecord) {
                 $id = $localRecord->getKey();
                 $processedIds[] = $id;
-                
+
                 if (isset($apiRecordsById[$id])) {
                     // Record exists in both places, update local from API
                     try {
@@ -167,7 +167,7 @@ trait SyncWithApi
                     }
                 }
             }
-            
+
             // Create missing records if requested
             if ($createMissing) {
                 foreach ($apiRecordsById as $id => $apiRecord) {
@@ -198,7 +198,7 @@ trait SyncWithApi
                 ]);
             }
         }
-        
+
         return $stats;
     }
 
@@ -212,11 +212,11 @@ trait SyncWithApi
     {
         // Get field mapping if defined
         $fieldMapping = $this->getApiFieldMapping();
-        
+
         foreach ($apiData as $apiField => $value) {
             // Check if there's a mapping for this field
             $modelField = $fieldMapping[$apiField] ?? $apiField;
-            
+
             // Only set if the field exists on the model
             if ($this->isFillable($modelField) && !$this->isGuarded($modelField)) {
                 $this->setAttribute($modelField, $value);
@@ -233,24 +233,24 @@ trait SyncWithApi
     protected function mapAttributesToApiData(array $attributes)
     {
         $apiData = [];
-        
+
         // Get field mapping if defined
         $fieldMapping = $this->getApiFieldMapping();
         $reverseMapping = array_flip($fieldMapping);
-        
+
         foreach ($attributes as $modelField => $value) {
             // Skip the primary key if it's empty (for new records)
             if ($modelField === $this->getKeyName() && empty($value)) {
                 continue;
             }
-            
+
             // Check if there's a mapping for this field
             $apiField = $reverseMapping[$modelField] ?? $modelField;
-            
+
             // Add to API data
             $apiData[$apiField] = $value;
         }
-        
+
         return $apiData;
     }
 
@@ -259,7 +259,7 @@ trait SyncWithApi
      *
      * @return array
      */
-    protected function getApiFieldMapping()
+    public function getApiFieldMapping()
     {
         return $this->apiFieldMapping ?? [];
     }
@@ -272,11 +272,11 @@ trait SyncWithApi
     protected function fetchFromApi()
     {
         $key = $this->getKey();
-        
+
         if (!$key) {
             return null;
         }
-        
+
         return $this->findFromApi($key);
     }
 }

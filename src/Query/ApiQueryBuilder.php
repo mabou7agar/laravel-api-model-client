@@ -520,6 +520,7 @@ class ApiQueryBuilder
 
         foreach ($possibleKeys as $key) {
             if (isset($response[$key]) && is_array($response[$key])) {
+                if (!isset($response[0])) { return $response; }
                 return $response[$key];
             }
         }
@@ -619,7 +620,7 @@ class ApiQueryBuilder
     {
         $prefix = config('api-model-relations.cache.prefix', 'api_model_');
         $class = str_replace('\\', '_', get_class($this->model));
-        $queryString = md5(json_encode($this->buildQueryParams()));
+        $queryString = md5($this->model->getApiEndpoint().json_encode($this->buildQueryParams()));
 
         return $prefix . $class . '_query_' . $queryString;
     }
@@ -913,6 +914,20 @@ class ApiQueryBuilder
 
         // Scope methods should return the query builder instance
         return $result instanceof static ? $result : $this;
+    }
+
+    /**
+     * Find a model by its primary key.
+     *
+     * @param  mixed  $id
+     * @param  array  $columns
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function find($id, $columns = ['*'])
+    {
+        $this->model->setApiEndpoint($this->model->getApiEndpoint().'/'.$id);
+        // Get the first result
+        return $this->first();
     }
 
     /**

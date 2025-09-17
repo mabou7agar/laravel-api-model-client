@@ -3,6 +3,7 @@
 namespace MTechStack\LaravelApiModelClient\Traits;
 
 use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
+use MTechStack\LaravelApiModelClient\Helpers\EndpointParameterResolver;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Arr;
 
@@ -24,10 +25,23 @@ trait ApiModelQueries
     /**
      * Get a new query builder instance for the model.
      *
-     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder|\Illuminate\Database\Eloquent\Builder
      */
     public function newQuery()
     {
+        // Check if we're being called from a morphTo relationship context
+        // by examining the call stack
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10);
+        foreach ($trace as $frame) {
+            if (isset($frame['function']) &&
+                (str_contains($frame['function'], 'newMorphTo') ||
+                 str_contains($frame['function'], 'morphTo') ||
+                 (isset($frame['class']) && str_contains($frame['class'], 'MorphTo')))) {
+                // Return standard Eloquent builder for morphTo relationships
+                return parent::newQuery();
+            }
+        }
+
         if ($this->isApiModel()) {
             return $this->newApiQuery();
         }
@@ -44,6 +58,52 @@ trait ApiModelQueries
     public function newCollection(array $models = [])
     {
         return new Collection($models);
+    }
+
+    /**
+     * Resolve endpoint parameters intelligently
+     *
+     * @param string $endpoint
+     * @param array $queryParams
+     * @param array $additionalParams
+     * @return string
+     */
+    public function resolveEndpointParameters(string $endpoint = null, array $queryParams = [], array $additionalParams = []): string
+    {
+        $endpoint = $endpoint ?? $this->getApiEndpoint();
+
+        return EndpointParameterResolver::resolve(
+            $endpoint,
+            $this,
+            $queryParams,
+            $additionalParams
+        );
+    }
+
+    /**
+     * Build endpoint with parameter validation
+     *
+     * @param string $endpoint
+     * @param array $queryParams
+     * @param array $additionalParams
+     * @param bool $throwOnUnresolved
+     * @return string
+     */
+    public function buildEndpointWithParams(
+        string $endpoint = null,
+        array $queryParams = [],
+        array $additionalParams = [],
+        bool $throwOnUnresolved = false
+    ): string {
+        $endpoint = $endpoint ?? $this->getApiEndpoint();
+
+        return EndpointParameterResolver::buildEndpoint(
+            $endpoint,
+            $this,
+            $queryParams,
+            $additionalParams,
+            $throwOnUnresolved
+        );
     }
 
     /**
@@ -83,12 +143,26 @@ trait ApiModelQueries
             // Get the API client
             $apiClient = $instance->getApiClient();
 
-            // Build the endpoint
-            $endpoint = $instance->getApiEndpoint();
-            if (!str_ends_with($endpoint, '/')) {
-                $endpoint .= '/';
+            // Build the endpoint with intelligent parameter resolution
+            $baseEndpoint = $instance->getApiEndpoint();
+
+            // Use EndpointParameterResolver to handle parameter substitution
+            $resolvedEndpoint = EndpointParameterResolver::resolve(
+                $baseEndpoint,
+                $instance,
+                ['id' => $id], // Query parameters
+                ['id' => $id]  // Additional parameters
+            );
+
+            // If endpoint still has unresolved parameters, append ID in traditional way
+            if (EndpointParameterResolver::hasUnresolvedParameters($resolvedEndpoint)) {
+                if (!str_ends_with($resolvedEndpoint, '/')) {
+                    $resolvedEndpoint .= '/';
+                }
+                $resolvedEndpoint .= $id;
             }
-            $endpoint .= $id;
+
+            $endpoint = $resolvedEndpoint;
 
             try {
                 // Make the API request
@@ -96,11 +170,11 @@ trait ApiModelQueries
 
                 // ✅ FIX: Use newFromApiResponse instead of mapApiAttributes for proper attribute flattening
                 $model = $instance->newFromApiResponse($response);
-                
+
                 if ($model === null) {
                     return null;
                 }
-                
+
                 $model->exists = true;
 
                 // Merge with local data if enabled
@@ -163,11 +237,11 @@ trait ApiModelQueries
                 foreach ($response as $item) {
                     // ✅ FIX: Use newFromApiResponse instead of mapApiAttributes for proper attribute flattening
                     $model = $instance->newFromApiResponse(['data' => $item]);
-                    
+
                     if ($model === null) {
                         continue;
                     }
-                    
+
                     $model->exists = true;
 
                     // Merge with local data if enabled
@@ -239,7 +313,7 @@ trait ApiModelQueries
 
             // ✅ FIX: Use newFromApiResponse for proper attribute flattening, then merge attributes
             $tempModel = $this->newFromApiResponse($response);
-            
+
             if ($tempModel !== null) {
                 // Update the current model with the flattened attributes
                 $this->setRawAttributes($tempModel->getAttributes(), true);
@@ -753,6 +827,30 @@ trait ApiModelQueries
         }
 
         return $this;
+    }
+
+    /**
+     * Create a collection of models from plain arrays.
+     *
+     * @param  array  $items
+     * @param  string|null  $connection
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function hydrate(array $items, $connection = null)
+    {
+        $instance = new static;
+
+        $items = array_map(function ($item) use ($instance) {
+            if ($instance->isApiModel()) {
+                // For API models, use newFromApiResponse to properly handle attribute flattening
+                return $instance->newFromApiResponse($item);
+            } else {
+                // For regular models, use standard hydration
+                return $instance->newFromBuilder($item);
+            }
+        }, $items);
+
+        return $instance->newCollection($items);
     }
 
     /**
