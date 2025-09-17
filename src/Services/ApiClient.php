@@ -180,11 +180,37 @@ class ApiClient implements ApiClientInterface
         $connectTimeout = $this->config['client']['connect_timeout'] ?? 10;
         $headers = $this->prepareHeaders($options['headers'] ?? []);
 
+        // Build HTTP client with basic configuration
         $client = Http::withHeaders($headers)
             ->timeout($timeout)
             ->withOptions([
                 'connect_timeout' => $connectTimeout
             ]);
+
+        // Configure SSL verification based on environment and configuration
+        $sslConfig = config('api-client.ssl', []);
+        $shouldVerifySSL = $sslConfig['verify'] ?? !app()->environment(['local', 'testing']);
+        
+        if (!$shouldVerifySSL) {
+            $client = $client->withoutVerifying();
+        }
+
+        // Add additional SSL options if configured
+        if (!empty($sslConfig)) {
+            $sslOptions = [];
+            
+            if (isset($sslConfig['verify_host']) && !$sslConfig['verify_host']) {
+                $sslOptions['verify_host'] = false;
+            }
+            
+            if (isset($sslConfig['ca_bundle']) && $sslConfig['ca_bundle']) {
+                $sslOptions['verify'] = $sslConfig['ca_bundle'];
+            }
+            
+            if (!empty($sslOptions)) {
+                $client = $client->withOptions($sslOptions);
+            }
+        }
 
         // Send the request based on method
         $response = match (strtoupper($method)) {

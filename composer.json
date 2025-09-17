@@ -1,6 +1,6 @@
 {
     "name": "m-tech-stack/laravel-api-model-client",
-    "version": "1.2.9",
+    "version": "1.2.10",
     "description": "A powerful Laravel package that enables Eloquent-like models to interact seamlessly with external APIs instead of a local database",
     "type": "library",
     "license": "MIT",

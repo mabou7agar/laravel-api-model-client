@@ -326,6 +326,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SSL Certificate Verification
+    |--------------------------------------------------------------------------
+    |
+    | Configure SSL certificate verification behavior for different environments.
+    | In local/debug environments, you may want to disable SSL verification
+    | for self-signed certificates or development APIs.
+    |
+    | Set API_CLIENT_SSL_VERIFY=false in your .env file to disable SSL verification
+    | Set APP_ENV=local or APP_ENV=testing to automatically disable SSL verification
+    |
+    */
+    'ssl' => [
+        'verify' => env('API_CLIENT_SSL_VERIFY', env('APP_ENV', 'production') !== 'local' && env('APP_ENV', 'production') !== 'testing'),
+        'verify_host' => env('API_CLIENT_SSL_VERIFY_HOST', env('APP_ENV', 'production') !== 'local' && env('APP_ENV', 'production') !== 'testing'),
+        'allow_self_signed' => env('API_CLIENT_SSL_ALLOW_SELF_SIGNED', env('APP_ENV', 'production') === 'local' || env('APP_ENV', 'production') === 'testing'),
+        'ca_bundle' => env('API_CLIENT_SSL_CA_BUNDLE', null),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Command Configuration
     |--------------------------------------------------------------------------
     |
