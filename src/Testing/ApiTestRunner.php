@@ -163,7 +163,7 @@ class ApiTestRunner
                 }
             }
 
-            $success = collect($tests)->every();
+            $success = collect($tests)->every(fn($value) => $value === true);
 
             return [
                 'success' => $success,
@@ -203,7 +203,7 @@ class ApiTestRunner
                 $tests['query_builder_error'] = $e->getMessage();
             }
 
-            $success = collect($tests)->filter(fn($value, $key) => !str_ends_with($key, '_error'))->every();
+            $success = collect($tests)->filter(fn($value, $key) => !str_ends_with($key, '_error'))->every(fn($value) => $value === true);
 
             return [
                 'success' => $success,
@@ -289,7 +289,7 @@ class ApiTestRunner
                 }
             }
 
-            $success = collect($tests)->filter(fn($value, $key) => !str_ends_with($key, '_error'))->every();
+            $success = collect($tests)->filter(fn($value, $key) => !str_ends_with($key, '_error'))->every(fn($value) => $value === true);
 
             return [
                 'success' => $success,
@@ -327,7 +327,7 @@ class ApiTestRunner
                 }
             }
 
-            $success = collect($tests)->every();
+            $success = collect($tests)->every(fn($value) => $value === true);
 
             return [
                 'success' => $success,

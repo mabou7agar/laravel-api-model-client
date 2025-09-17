@@ -297,9 +297,10 @@ class ModelGenerator
         $method = "    /**\n";
         $method .= "     * Get validation rules for this model\n";
         $method .= "     *\n";
+        $method .= "     * @param string|null \$operation The operation type (create, update, etc.)\n";
         $method .= "     * @return array\n";
         $method .= "     */\n";
-        $method .= "    public static function getValidationRules(): array\n";
+        $method .= "    public function getValidationRules(string \$operation = null): array\n";
         $method .= "    {\n";
         $method .= "        return [\n";
         
