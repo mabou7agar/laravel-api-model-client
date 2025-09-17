@@ -182,7 +182,9 @@ class ApiClient implements ApiClientInterface
 
         $client = Http::withHeaders($headers)
             ->timeout($timeout)
-            ->connectTimeout($connectTimeout);
+            ->withOptions([
+                'connect_timeout' => $connectTimeout
+            ]);
 
         // Send the request based on method
         $response = match (strtoupper($method)) {
