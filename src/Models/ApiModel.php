@@ -77,6 +77,35 @@ class ApiModel extends Model implements ApiModelInterface
     }
 
     /**
+     * Resolve the observer classes to be used for this model.
+     *
+     * @return array
+     */
+    public static function resolveObserveAttributes()
+    {
+        // Get the model class name
+        $modelClass = static::class;
+        
+        // Check if there's a specific observer class defined
+        $observerClass = $modelClass . 'Observer';
+        
+        // Return array of observer classes if they exist
+        $observers = [];
+        
+        if (class_exists($observerClass)) {
+            $observers[] = $observerClass;
+        }
+        
+        // Check for observers defined in the model's $observables property
+        $instance = static::makeSafeInstance();
+        if (property_exists($instance, 'observables') && is_array($instance->observables)) {
+            $observers = array_merge($observers, $instance->observables);
+        }
+        
+        return $observers;
+    }
+
+    /**
      * Override HasEvents::observe to instantiate safely when subclass constructors
      * have required parameters (e.g., test anonymous models).
      */
