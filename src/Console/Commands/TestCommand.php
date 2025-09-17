@@ -32,7 +32,6 @@ class TestCommand extends Command
                             {--iterations=100 : Number of iterations for performance testing}
                             {--format=table : Output format (table, json, yaml, html)}
                             {--output= : Save test results to file}
-                            {--verbose : Show detailed test information}
                             {--fail-fast : Stop on first failure}
                             {--dry-run : Show what would be tested without executing}';
 
@@ -76,7 +75,7 @@ class TestCommand extends Command
         $iterations = (int) $this->option('iterations');
         $format = $this->option('format');
         $output = $this->option('output');
-        $verbose = $this->option('verbose');
+        $verbose = $this->getOutput()->isVerbose();
         $failFast = $this->option('fail-fast');
         $dryRun = $this->option('dry-run');
 

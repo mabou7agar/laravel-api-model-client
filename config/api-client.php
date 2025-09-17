@@ -76,7 +76,7 @@ return [
             'caching' => [
                 'enabled' => true,
                 'ttl' => env('API_CLIENT_PRIMARY_CACHE_TTL', 3600), // 1 hour
-                'store' => env('API_CLIENT_PRIMARY_CACHE_STORE', 'default'),
+                'store' => env('API_CLIENT_PRIMARY_CACHE_STORE', env('API_CLIENT_CACHE_STORE', 'database')),
                 'prefix' => 'api_client_primary_',
                 'tags' => ['api-client', 'primary-schema'],
             ],
@@ -121,7 +121,7 @@ return [
             'caching' => [
                 'enabled' => true,
                 'ttl' => 1800, // 30 minutes
-                'store' => 'default',
+                'store' => env('API_CLIENT_SECONDARY_CACHE_STORE', env('API_CLIENT_CACHE_STORE', 'database')),
                 'prefix' => 'api_client_secondary_',
                 'tags' => ['api-client', 'secondary-schema'],
             ],
@@ -165,7 +165,7 @@ return [
             'caching' => [
                 'enabled' => false,
                 'ttl' => 300, // 5 minutes
-                'store' => 'array',
+                'store' => env('API_CLIENT_TESTING_CACHE_STORE', env('API_CLIENT_CACHE_STORE', 'array')),
                 'prefix' => 'api_client_testing_',
                 'tags' => ['api-client', 'testing-schema'],
             ],
@@ -203,7 +203,7 @@ return [
     'caching' => [
         'enabled' => env('API_CLIENT_CACHE_ENABLED', true),
         'default_ttl' => env('API_CLIENT_CACHE_TTL', 3600),
-        'store' => env('API_CLIENT_CACHE_STORE', 'default'),
+        'store' => env('API_CLIENT_CACHE_STORE', 'database'),
         'prefix' => env('API_CLIENT_CACHE_PREFIX', 'api_client_'),
         'tags' => ['api-client'],
         'compression' => env('API_CLIENT_CACHE_COMPRESSION', false),
