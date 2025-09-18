@@ -520,7 +520,7 @@ class ApiQueryBuilder
 
         foreach ($possibleKeys as $key) {
             if (isset($response[$key]) && is_array($response[$key])) {
-                if (!isset($response[0])) { return $response; }
+                if (isset($response[$key]['id'])) { return $response; }
                 return $response[$key];
             }
         }
