@@ -5,6 +5,7 @@ namespace MTechStack\LaravelApiModelClient\Relations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder;
@@ -88,11 +89,11 @@ class HasManyFromApi extends ApiRelation
      * Match the eagerly loaded results to their parents.
      *
      * @param array $models
-     * @param \Illuminate\Database\Eloquent\Collection $results
+     * @param \Illuminate\Database\Eloquent\Collection|\Illuminate\Support\Collection $results
      * @param string $relation
      * @return array
      */
-    public function match(array $models, Collection $results, $relation)
+    public function match(array $models, Collection|BaseCollection $results, $relation)
     {
         $dictionary = $this->buildDictionary($results);
 
@@ -115,10 +116,10 @@ class HasManyFromApi extends ApiRelation
     /**
      * Build model dictionary keyed by the relation's foreign key.
      *
-     * @param \Illuminate\Database\Eloquent\Collection $results
+     * @param \Illuminate\Database\Eloquent\Collection|\Illuminate\Support\Collection $results
      * @return array
      */
-    protected function buildDictionary(Collection $results)
+    protected function buildDictionary(Collection|BaseCollection $results)
     {
         $dictionary = [];
 

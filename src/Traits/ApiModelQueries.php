@@ -512,6 +512,17 @@ trait ApiModelQueries
     }
 
     /**
+     * Create a new query builder instance and call the with method.
+     *
+     * @param array|string $relations
+     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     */
+    public static function with($relations)
+    {
+        return (new static)->newApiQuery()->with($relations);
+    }
+
+    /**
      * Execute the query and get the first result.
      *
      * @param  array  $columns
@@ -851,6 +862,150 @@ trait ApiModelQueries
         }, $items);
 
         return $instance->newCollection($items);
+    }
+
+    /**
+     * Define a polymorphic relationship that can handle both API and local models.
+     *
+     * @param  string|null  $name
+     * @param  string|null  $type
+     * @param  string|null  $id
+     * @param  string|null  $ownerKey
+     * @return mixed
+     */
+    public function morphToApi($name = null, $type = null, $id = null, $ownerKey = null)
+    {
+        $name = $name ?: $this->guessBelongsToRelation();
+
+        list($type, $id) = $this->getMorphs(
+            $name, $type, $id
+        );
+
+        // Get the morph type and ID from the model attributes
+        $morphType = $this->getAttribute($type);
+        $morphId = $this->getAttribute($id);
+
+        if (empty($morphType) || empty($morphId)) {
+            return null;
+        }
+
+        // Check if the morph type is an API model
+        if (class_exists($morphType)) {
+            $morphInstance = new $morphType;
+            
+            if (method_exists($morphInstance, 'isApiModel') && $morphInstance->isApiModel()) {
+                // Handle API model - directly call find method
+                try {
+                    return $morphType::find($morphId);
+                } catch (\Exception $e) {
+                    // Log error and return null if API call fails
+                    \Log::warning("Failed to fetch API model {$morphType} with ID {$morphId}: " . $e->getMessage());
+                    return null;
+                }
+            }
+        }
+
+        // Fall back to standard morphTo for regular Eloquent models
+        return parent::morphTo($name, $type, $id, $ownerKey);
+    }
+
+    /**
+     * Override the standard morphTo to handle API models automatically.
+     * Only applies when the current model is NOT an API model (i.e., it's a local database model).
+     *
+     * @param  string|null  $name
+     * @param  string|null  $type
+     * @param  string|null  $id
+     * @param  string|null  $ownerKey
+     * @return mixed
+     */
+    public function morphTo($name = null, $type = null, $id = null, $ownerKey = null)
+    {
+        // If this model itself is an API model, use standard morphTo behavior
+        if ($this->isApiModel()) {
+            return parent::morphTo($name, $type, $id, $ownerKey);
+        }
+
+        // This is a local database model with morphTo to potentially API models
+        $name = $name ?: $this->guessBelongsToRelation();
+
+        list($type, $id) = $this->getMorphs(
+            $name, $type, $id
+        );
+
+        // Get the morph type and ID from the model attributes
+        $morphType = $this->getAttribute($type);
+        $morphId = $this->getAttribute($id);
+
+        if (empty($morphType) || empty($morphId)) {
+            return null;
+        }
+
+        // Check if the morph type is an API model
+        if (class_exists($morphType)) {
+            $morphInstance = new $morphType;
+            
+            if (method_exists($morphInstance, 'isApiModel') && $morphInstance->isApiModel()) {
+                // Handle API model - directly call find method
+                try {
+                    return $morphType::find($morphId);
+                } catch (\Exception $e) {
+                    // Log error and return null if API call fails
+                    \Log::warning("Failed to fetch API model {$morphType} with ID {$morphId}: " . $e->getMessage());
+                    return null;
+                }
+            }
+        }
+
+        // Fall back to standard morphTo for regular Eloquent models
+        return parent::morphTo($name, $type, $id, $ownerKey);
+    }
+
+    /**
+     * Get the morphed model for API models (direct access, not a relationship).
+     * Use this when you need the actual model instance instead of a relationship.
+     *
+     * @param  string|null  $name
+     * @param  string|null  $type
+     * @param  string|null  $id
+     * @return mixed|null
+     */
+    public function getMorphedModel($name = null, $type = null, $id = null)
+    {
+        $name = $name ?: 'entity'; // Default name
+
+        list($type, $id) = $this->getMorphs(
+            $name, $type, $id
+        );
+
+        // Get the morph type and ID from the model attributes
+        $morphType = $this->getAttribute($type);
+        $morphId = $this->getAttribute($id);
+
+        if (empty($morphType) || empty($morphId)) {
+            return null;
+        }
+
+        // Check if the morph type is an API model
+        if (class_exists($morphType)) {
+            $morphInstance = new $morphType;
+            
+            if (method_exists($morphInstance, 'isApiModel') && $morphInstance->isApiModel()) {
+                // Handle API model - directly call find method
+                try {
+                    return $morphType::find($morphId);
+                } catch (\Exception $e) {
+                    // Log error and return null if API call fails
+                    \Log::warning("Failed to fetch API model {$morphType} with ID {$morphId}: " . $e->getMessage());
+                    return null;
+                }
+            } else {
+                // Handle regular Eloquent model
+                return $morphType::find($morphId);
+            }
+        }
+
+        return null;
     }
 
     /**

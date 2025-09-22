@@ -1,0 +1,107 @@
+<?php
+
+namespace MTechStack\LaravelApiModelClient\Traits;
+
+/**
+ * Trait for local database models that need to morphTo API models.
+ * Use this trait in your local Eloquent models that have morphTo relationships
+ * where the morphed model might be an API model.
+ * 
+ * This trait provides a simple override that doesn't interfere with Laravel's core methods.
+ */
+trait MorphsToApiModels
+{
+    /**
+     * Override the standard morphTo to handle API models automatically.
+     * This method detects if the morphed model is an API model and fetches it via API.
+     *
+     * @param  string|null  $name
+     * @param  string|null  $type
+     * @param  string|null  $id
+     * @param  string|null  $ownerKey
+     * @return mixed
+     */
+    public function morphTo($name = null, $type = null, $id = null, $ownerKey = null)
+    {
+        // Determine the relationship name first
+        $relationName = $name;
+        if (!$relationName) {
+            try {
+                $relationName = $this->guessBelongsToRelation();
+            } catch (\Exception $e) {
+                // Fallback if guessBelongsToRelation fails
+                $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)[2];
+                $relationName = $caller['function'] ?? 'entity';
+            }
+        }
+        
+        // Get the morph type and ID from attributes
+        $morphType = $this->getAttribute($relationName . '_type');
+        $morphId = $this->getAttribute($relationName . '_id');
+        
+        \Log::info("MorphsToApiModels: morphTo called", [
+            'name' => $name,
+            'relation_name' => $relationName,
+            'morph_type' => $morphType,
+            'morph_id' => $morphId,
+            'model_class' => get_class($this)
+        ]);
+        
+        // Check if it's an API model BEFORE calling parent::morphTo
+        if (!empty($morphType) && !empty($morphId) && class_exists($morphType)) {
+            if ($this->isApiModelClass($morphType)) {
+                \Log::info("MorphsToApiModels: detected API model, calling find", [
+                    'class' => $morphType,
+                    'id' => $morphId
+                ]);
+                
+                try {
+                    $apiModel = $morphType::find($morphId);
+                    \Log::info("MorphsToApiModels: API model result", [
+                        'result' => $apiModel ? 'found' : 'not found',
+                        'class' => $apiModel ? get_class($apiModel) : 'null'
+                    ]);
+                    return $apiModel;
+                } catch (\Exception $e) {
+                    \Log::warning("Failed to fetch API model {$morphType} with ID {$morphId}: " . $e->getMessage());
+                    return null;
+                }
+            } else {
+                \Log::info("MorphsToApiModels: not an API model, using parent::morphTo", [
+                    'class' => $morphType
+                ]);
+            }
+        } else {
+            \Log::info("MorphsToApiModels: missing data or class doesn't exist", [
+                'morph_type_empty' => empty($morphType),
+                'morph_id_empty' => empty($morphId),
+                'class_exists' => class_exists($morphType ?: '')
+            ]);
+        }
+        
+        // Fall back to Laravel's standard morphTo for regular models
+        return parent::morphTo($name, $type, $id, $ownerKey);
+    }
+
+    /**
+     * Check if a class is an API model using safe detection methods.
+     *
+     * @param  string  $className
+     * @return bool
+     */
+    protected function isApiModelClass($className)
+    {
+        // Use simple string checks first (fastest)
+        if (strpos($className, 'ApiModel') !== false || 
+            strpos($className, '\\Api\\') !== false) {
+            return true;
+        }
+
+        // Check inheritance safely
+        try {
+            return is_subclass_of($className, 'MTechStack\LaravelApiModelClient\Models\ApiModel');
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+}

@@ -5,6 +5,7 @@ namespace MTechStack\LaravelApiModelClient\Query;
 use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
 use MTechStack\LaravelApiModelClient\Services\ApiClient;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Traits\Macroable;
@@ -53,6 +54,13 @@ class ApiQueryBuilder
      * @var array
      */
     protected $columns = ['*'];
+
+    /**
+     * The relationships that should be eager loaded.
+     *
+     * @var array
+     */
+    protected $eagerLoad = [];
 
     /**
      * Create a new API query builder instance.
@@ -239,6 +247,127 @@ class ApiQueryBuilder
     }
 
     /**
+     * Set the relationships that should be eager loaded.
+     *
+     * @param array|string $relations
+     * @return $this
+     */
+    public function with($relations)
+    {
+        $eagerLoad = $this->parseWithRelations(is_string($relations) ? func_get_args() : $relations);
+
+        $this->eagerLoad = array_merge($this->eagerLoad, $eagerLoad);
+
+        return $this;
+    }
+
+    /**
+     * Parse a list of relations into individuals.
+     *
+     * @param array $relations
+     * @return array
+     */
+    protected function parseWithRelations(array $relations)
+    {
+        $results = [];
+
+        foreach ($relations as $name => $constraints) {
+            // If numeric key, then it's just a relation name
+            if (is_numeric($name)) {
+                $results[$constraints] = function () {
+                    //
+                };
+            } else {
+                $results[$name] = $constraints;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Add a relationship count / exists condition to the query.
+     *
+     * @param string $relation
+     * @param string $operator
+     * @param int $count
+     * @param string $boolean
+     * @param \Closure|null $callback
+     * @return $this
+     */
+    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', $callback = null)
+    {
+        // For API models, we'll implement this as a simple filter
+        // This is a placeholder implementation - you may need to customize based on your API
+        return $this->where($relation . '_count', $operator, $count);
+    }
+
+    /**
+     * Add a relationship count / exists condition to the query with where clauses.
+     *
+     * @param string $relation
+     * @param \Closure|null $callback
+     * @param string $operator
+     * @param int $count
+     * @return $this
+     */
+    public function whereHas($relation, $callback = null, $operator = '>=', $count = 1)
+    {
+        return $this->has($relation, $operator, $count, 'and', $callback);
+    }
+
+    /**
+     * Add a relationship count / exists condition to the query with an "or".
+     *
+     * @param string $relation
+     * @param \Closure|null $callback
+     * @param string $operator
+     * @param int $count
+     * @return $this
+     */
+    public function orWhereHas($relation, $callback = null, $operator = '>=', $count = 1)
+    {
+        return $this->has($relation, $operator, $count, 'or', $callback);
+    }
+
+    /**
+     * Add a relationship count / exists condition to the query.
+     *
+     * @param string $relation
+     * @param string $boolean
+     * @param \Closure|null $callback
+     * @return $this
+     */
+    public function doesntHave($relation, $boolean = 'and', $callback = null)
+    {
+        return $this->has($relation, '<', 1, $boolean, $callback);
+    }
+
+    /**
+     * Add a relationship count / exists condition to the query with where clauses.
+     *
+     * @param string $relation
+     * @param \Closure|null $callback
+     * @return $this
+     */
+    public function whereDoesntHave($relation, $callback = null)
+    {
+        return $this->doesntHave($relation, 'and', $callback);
+    }
+
+    /**
+     * Add a relationship count / exists condition to the query with an "or".
+     *
+     * @param string $relation
+     * @param \Closure|null $callback
+     * @return $this
+     */
+    public function orWhereDoesntHave($relation, $callback = null)
+    {
+        return $this->doesntHave($relation, 'or', $callback);
+    }
+
+    /**
      * Execute the query and get the first result.
      *
      * @return \MTechStack\LaravelApiModelClient\Models\ApiModel|null
@@ -357,7 +486,7 @@ class ApiQueryBuilder
                 ]);
             }
 
-            return new Collection();
+            return new EloquentCollection();
         }
     }
 
@@ -404,7 +533,7 @@ class ApiQueryBuilder
             }
 
             // Return empty collection
-            return new Collection();
+            return new EloquentCollection();
         }
     }
 
@@ -458,7 +587,55 @@ class ApiQueryBuilder
             }
         }
 
-        return new Collection($models);
+        $collection = new EloquentCollection($models);
+
+        // Load eager relationships if any are specified
+        if (!empty($this->eagerLoad)) {
+            $collection = $this->eagerLoadRelations($collection);
+        }
+
+        return $collection;
+    }
+
+    /**
+     * Eager load the relationships for the models.
+     *
+     * @param \Illuminate\Support\Collection $models
+     * @return \Illuminate\Support\Collection
+     */
+    protected function eagerLoadRelations($models)
+    {
+        foreach ($this->eagerLoad as $name => $constraints) {
+            // Load the relationship for each model
+            $models = $this->eagerLoadRelation($models, $name, $constraints);
+        }
+
+        return $models;
+    }
+
+    /**
+     * Eagerly load the relationship on a set of models.
+     *
+     * @param \Illuminate\Support\Collection $models
+     * @param string $name
+     * @param \Closure $constraints
+     * @return \Illuminate\Support\Collection
+     */
+    protected function eagerLoadRelation($models, $name, $constraints)
+    {
+        // For API models, we'll try to load relationships if the model supports it
+        foreach ($models as $model) {
+            if (method_exists($model, 'load')) {
+                try {
+                    $model->load([$name => $constraints]);
+                } catch (\Exception $e) {
+                    // Log error but continue processing
+                    error_log("Failed to eager load relationship '{$name}': " . $e->getMessage());
+                }
+            }
+        }
+
+        return $models;
     }
 
     /**
@@ -499,7 +676,7 @@ class ApiQueryBuilder
             }
         }
 
-        return new Collection($models);
+        return new EloquentCollection($models);
     }
 
     /**
@@ -560,6 +737,11 @@ class ApiQueryBuilder
         // Add columns to select
         if ($this->columns !== ['*']) {
             $params['fields'] = implode(',', $this->columns);
+        }
+
+        // Add eager loading relationships
+        if (!empty($this->eagerLoad)) {
+            $params['include'] = implode(',', array_keys($this->eagerLoad));
         }
 
         return $params;
@@ -826,7 +1008,7 @@ class ApiQueryBuilder
 
             // Return empty paginator
             return new ApiPaginator(
-                new Collection(),
+                new EloquentCollection(),
                 0,
                 $perPage,
                 $page,
