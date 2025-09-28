@@ -32,16 +32,25 @@ class MorphToFromApi extends ApiRelation
     protected $morphClass;
 
     /**
+     * The name of the relationship.
+     *
+     * @var string
+     */
+    protected $relationName;
+
+    /**
      * Create a new morph to relationship instance.
      *
      * @param  \Illuminate\Database\Eloquent\Model  $parent
+     * @param  string  $name
      * @param  string  $morphType
      * @param  string  $morphId
      * @param  string|null  $localKey
      * @return void
      */
-    public function __construct(Model $parent, $morphType, $morphId, $localKey = null)
+    public function __construct(Model $parent, $name, $morphType, $morphId, $localKey = null)
     {
+        $this->relationName = $name;
         $this->morphId = $morphId;
         $this->morphType = $morphType;
         $this->localKey = $localKey;
