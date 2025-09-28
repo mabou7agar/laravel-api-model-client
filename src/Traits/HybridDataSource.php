@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use MTechStack\LaravelApiModelClient\Contracts\DataSourceModes;
 
 /**
  * Hybrid Data Source Trait
@@ -24,14 +25,6 @@ use Illuminate\Support\Facades\Schema;
  */
 trait HybridDataSource
 {
-    /**
-     * Data source modes
-     */
-    const MODE_API_ONLY = 'api_only';
-    const MODE_DB_ONLY = 'db_only';
-    const MODE_HYBRID = 'hybrid';
-    const MODE_API_FIRST = 'api_first';
-    const MODE_DUAL_SYNC = 'dual_sync';
 
     /**
      * Get the current data source mode for this model.
@@ -55,7 +48,7 @@ trait HybridDataSource
         }
 
         // Check global configuration
-        return Config::get('api-model-client.data_source_mode', self::MODE_HYBRID);
+        return Config::get('api-model-client.data_source_mode', DataSourceModes::MODE_HYBRID);
     }
 
     /**
@@ -66,7 +59,7 @@ trait HybridDataSource
     protected function isDatabaseEnabled(): bool
     {
         $mode = $this->getDataSourceMode();
-        return in_array($mode, [self::MODE_DB_ONLY, self::MODE_HYBRID, self::MODE_DUAL_SYNC]);
+        return in_array($mode, [DataSourceModes::MODE_DB_ONLY, DataSourceModes::MODE_HYBRID, DataSourceModes::MODE_DUAL_SYNC]);
     }
 
     /**
@@ -77,7 +70,7 @@ trait HybridDataSource
     protected function isApiEnabled(): bool
     {
         $mode = $this->getDataSourceMode();
-        return in_array($mode, [self::MODE_API_ONLY, self::MODE_HYBRID, self::MODE_API_FIRST, self::MODE_DUAL_SYNC]);
+        return in_array($mode, [DataSourceModes::MODE_API_ONLY, DataSourceModes::MODE_HYBRID, DataSourceModes::MODE_API_FIRST, DataSourceModes::MODE_DUAL_SYNC]);
     }
 
     /**
@@ -93,19 +86,19 @@ trait HybridDataSource
         $mode = $instance->getDataSourceMode();
 
         switch ($mode) {
-            case self::MODE_API_ONLY:
+            case DataSourceModes::MODE_API_ONLY:
                 return static::findFromApiOnly($id, $columns);
 
-            case self::MODE_DB_ONLY:
+            case DataSourceModes::MODE_DB_ONLY:
                 return static::findFromDatabase($id, $columns);
 
-            case self::MODE_HYBRID:
+            case DataSourceModes::MODE_HYBRID:
                 return static::findHybrid($id, $columns);
 
-            case self::MODE_API_FIRST:
+            case DataSourceModes::MODE_API_FIRST:
                 return static::findApiFirst($id, $columns);
 
-            case self::MODE_DUAL_SYNC:
+            case DataSourceModes::MODE_DUAL_SYNC:
                 return static::findDualSync($id, $columns);
 
             default:
@@ -125,19 +118,19 @@ trait HybridDataSource
         $mode = $instance->getDataSourceMode();
 
         switch ($mode) {
-            case self::MODE_API_ONLY:
+            case DataSourceModes::MODE_API_ONLY:
                 return static::allFromApiOnly($columns);
 
-            case self::MODE_DB_ONLY:
+            case DataSourceModes::MODE_DB_ONLY:
                 return static::allFromDatabase($columns);
 
-            case self::MODE_HYBRID:
+            case DataSourceModes::MODE_HYBRID:
                 return static::allHybrid($columns);
 
-            case self::MODE_API_FIRST:
+            case DataSourceModes::MODE_API_FIRST:
                 return static::allApiFirst($columns);
 
-            case self::MODE_DUAL_SYNC:
+            case DataSourceModes::MODE_DUAL_SYNC:
                 return static::allDualSync($columns);
 
             default:
@@ -156,19 +149,19 @@ trait HybridDataSource
         $mode = $this->getDataSourceMode();
 
         switch ($mode) {
-            case self::MODE_API_ONLY:
+            case DataSourceModes::MODE_API_ONLY:
                 return $this->saveToApiOnly($options);
 
-            case self::MODE_DB_ONLY:
+            case DataSourceModes::MODE_DB_ONLY:
                 return $this->saveToDatabase($options);
 
-            case self::MODE_HYBRID:
+            case DataSourceModes::MODE_HYBRID:
                 return $this->saveHybrid($options);
 
-            case self::MODE_API_FIRST:
+            case DataSourceModes::MODE_API_FIRST:
                 return $this->saveApiFirst($options);
 
-            case self::MODE_DUAL_SYNC:
+            case DataSourceModes::MODE_DUAL_SYNC:
                 return $this->saveDualSync($options);
 
             default:
@@ -186,19 +179,19 @@ trait HybridDataSource
         $mode = $this->getDataSourceMode();
 
         switch ($mode) {
-            case self::MODE_API_ONLY:
+            case DataSourceModes::MODE_API_ONLY:
                 return $this->deleteFromApiOnly();
 
-            case self::MODE_DB_ONLY:
+            case DataSourceModes::MODE_DB_ONLY:
                 return $this->deleteFromDatabase();
 
-            case self::MODE_HYBRID:
+            case DataSourceModes::MODE_HYBRID:
                 return $this->deleteHybrid();
 
-            case self::MODE_API_FIRST:
+            case DataSourceModes::MODE_API_FIRST:
                 return $this->deleteApiFirst();
 
-            case self::MODE_DUAL_SYNC:
+            case DataSourceModes::MODE_DUAL_SYNC:
                 return $this->deleteDualSync();
 
             default:
@@ -218,19 +211,19 @@ trait HybridDataSource
         $mode = $instance->getDataSourceMode();
 
         switch ($mode) {
-            case self::MODE_API_ONLY:
+            case DataSourceModes::MODE_API_ONLY:
                 return static::createInApiOnly($attributes);
 
-            case self::MODE_DB_ONLY:
+            case DataSourceModes::MODE_DB_ONLY:
                 return static::createInDatabase($attributes);
 
-            case self::MODE_HYBRID:
+            case DataSourceModes::MODE_HYBRID:
                 return static::createHybrid($attributes);
 
-            case self::MODE_API_FIRST:
+            case DataSourceModes::MODE_API_FIRST:
                 return static::createApiFirst($attributes);
 
-            case self::MODE_DUAL_SYNC:
+            case DataSourceModes::MODE_DUAL_SYNC:
                 return static::createDualSync($attributes);
 
             default:
