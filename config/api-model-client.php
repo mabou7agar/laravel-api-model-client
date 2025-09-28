@@ -44,6 +44,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Morph Relation Names
+    |--------------------------------------------------------------------------
+    |
+    | List of common morphTo relation names that should be automatically
+    | overridden. Add any custom morph relation names your application uses.
+    |
+    */
+    'morph_relation_names' => [
+        'entity',
+        'subject', 
+        'target',
+        'owner',
+        'morph',
+        'morphable',
+        'related',
+        'parent',
+        'source',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Debug Morph Override
     |--------------------------------------------------------------------------
     |

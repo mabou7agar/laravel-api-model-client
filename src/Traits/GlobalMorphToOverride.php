@@ -51,41 +51,56 @@ trait GlobalMorphToOverride
     }
 
     /**
-     * Override morphTo method globally using Laravel's macro system.
+     * Override morphTo method globally using relation resolvers.
      *
      * @return void
      */
     protected function overrideMorphToGlobally(): void
     {
-        Model::macro('morphTo', function ($name = null, $type = null, $id = null, $ownerKey = null) {
-            // Auto-detect relation name if not provided
-            if (is_null($name)) {
-                $name = $this->guessBelongsToRelation();
+        // Get common morph relation names from config
+        $morphRelationNames = config('api-model-client.morph_relation_names', [
+            'entity', 'subject', 'target', 'owner', 'morph', 'morphable'
+        ]);
+
+        // Register resolvers for each common morph relation name
+        foreach ($morphRelationNames as $relationName) {
+            Model::resolveRelationUsing($relationName, function (Model $model) use ($relationName) {
+                return static::createSmartMorphToRelation($model, $relationName);
+            });
+        }
+    }
+
+    /**
+     * Create a smart morphTo relation that detects ApiModel targets.
+     *
+     * @param Model $model
+     * @param string $relationName
+     * @return \Illuminate\Database\Eloquent\Relations\Relation
+     */
+    protected static function createSmartMorphToRelation(Model $model, string $relationName)
+    {
+        // Set default column names
+        $typeColumn = $relationName . '_type';
+        $idColumn = $relationName . '_id';
+        
+        // Get the morphed type from the model
+        $morphType = $model->getAttribute($typeColumn);
+        
+        if ($morphType) {
+            // Resolve the actual class from morph map
+            $class = Relation::getMorphedModel($morphType) ?: $morphType;
+            
+            // Check if target class exists and extends ApiModel
+            if (is_string($class) && class_exists($class) && is_subclass_of($class, ApiModel::class)) {
+                // Return our API-aware MorphTo relation
+                return new MorphToFromApi($model, $relationName, $typeColumn, $idColumn);
             }
-            
-            // Set default column names
-            $type = $type ?: $name.'_type';
-            $id = $id ?: $name.'_id';
-            
-            // Get the morphed type from the model
-            $morphType = $this->getAttribute($type);
-            
-            if ($morphType) {
-                // Resolve the actual class from morph map
-                $class = Relation::getMorphedModel($morphType) ?: $morphType;
-                
-                // Check if target class extends ApiModel
-                if (is_string($class) && is_subclass_of($class, ApiModel::class)) {
-                    // Return our API-aware MorphTo relation
-                    return new MorphToFromApi($this, $name, $type, $id, $ownerKey);
-                }
-            }
-            
-            // Fall back to original Eloquent morphTo
-            return new \Illuminate\Database\Eloquent\Relations\MorphTo(
-                $this->newQuery(), $this, $id, $ownerKey, $type, $name
-            );
-        });
+        }
+        
+        // Fall back to standard Eloquent MorphTo (create directly to avoid recursion)
+        return new \Illuminate\Database\Eloquent\Relations\MorphTo(
+            $model->newQuery(), $model, $idColumn, null, $typeColumn, $relationName
+        );
     }
 
     /**
