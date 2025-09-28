@@ -152,11 +152,16 @@ class BelongsToFromApi extends ApiRelation
         }
         
         try {
-            // Build the endpoint with the foreign key
-            $endpoint = $this->endpoint . '/' . $foreignKey;
+            // Build the endpoint with parameter substitution
+            $endpoint = $this->buildEndpointWithParameters($foreignKey);
             
-            // Make API request
-            $response = $this->getApiClient()->get($endpoint);
+            // Make API request with header injection support
+            $requestContext = [
+                'endpoint' => $endpoint,
+                'relation_type' => 'BelongsToFromApi',
+                'foreign_key' => $foreignKey
+            ];
+            $response = $this->getApiClient($requestContext)->get($endpoint);
             
             // Cache the response if caching is enabled
             if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
@@ -169,6 +174,7 @@ class BelongsToFromApi extends ApiRelation
             if (config('api-model-relations.error_handling.log_errors', true)) {
                 \Illuminate\Support\Facades\Log::error('Error fetching BelongsToFromApi relation', [
                     'endpoint' => $this->endpoint,
+                    'resolved_endpoint' => $endpoint ?? 'failed_to_resolve',
                     'foreign_key' => $foreignKey,
                     'exception' => $e->getMessage(),
                 ]);
@@ -176,6 +182,38 @@ class BelongsToFromApi extends ApiRelation
             
             return null;
         }
+    }
+
+    /**
+     * Build endpoint with parameter substitution.
+     *
+     * @param mixed $foreignKey
+     * @return string
+     */
+    protected function buildEndpointWithParameters($foreignKey)
+    {
+        $endpoint = $this->endpoint;
+        
+        // Replace common parameter patterns
+        $patterns = [
+            '{' . $this->ownerKey . '}' => $foreignKey,
+            '{' . $this->foreignKey . '}' => $foreignKey,
+            '{id}' => $foreignKey,
+            '{product_id}' => $foreignKey,
+            '{parent_id}' => $foreignKey,
+            '{category_id}' => $foreignKey,
+            '{user_id}' => $foreignKey,
+        ];
+        
+        foreach ($patterns as $pattern => $replacement) {
+            if (strpos($endpoint, $pattern) !== false) {
+                $endpoint = str_replace($pattern, $replacement, $endpoint);
+                return $endpoint;
+            }
+        }
+        
+        // If no parameter patterns found, append the foreign key
+        return rtrim($endpoint, '/') . '/' . $foreignKey;
     }
 
     /**

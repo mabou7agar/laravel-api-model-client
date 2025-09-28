@@ -46,13 +46,32 @@ abstract class ApiRelation extends Relation
     }
 
     /**
-     * Get the API client instance.
+     * Get the API client instance with header injection support.
      *
+     * @param array $requestContext Additional context for dynamic headers
      * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
-    protected function getApiClient()
+    protected function getApiClient(array $requestContext = [])
     {
-        return App::make('api-client');
+        $client = App::make('api-client');
+        
+        // Inject headers if the parent model supports header injection
+        if (method_exists($this->parent, 'getResolvedApiHeaders')) {
+            // Inject resolved headers if the client supports it
+            if (method_exists($client, 'setHeaders') || method_exists($client, 'withHeaders')) {
+                $headers = $this->parent->getResolvedApiHeaders($requestContext);
+                
+                if (!empty($headers)) {
+                    if (method_exists($client, 'setHeaders')) {
+                        $client->setHeaders($headers);
+                    } elseif (method_exists($client, 'withHeaders')) {
+                        $client = $client->withHeaders($headers);
+                    }
+                }
+            }
+        }
+        
+        return $client;
     }
 
     /**

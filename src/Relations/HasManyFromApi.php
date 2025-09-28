@@ -40,7 +40,7 @@ class HasManyFromApi extends ApiRelation
     {
         $this->foreignKey = $foreignKey;
         $this->localKey = $localKey;
-        
+
         parent::__construct($query, $parent, $endpoint);
     }
 
@@ -149,17 +149,17 @@ class HasManyFromApi extends ApiRelation
     public function get($columns = ['*'])
     {
         $parentKey = $this->parent->getAttribute($this->localKey);
-        
+
         if (is_null($parentKey)) {
             return $this->related->newCollection();
         }
-        
+
         // Check if the relationship data is already loaded in the parent model
         $preloadedData = $this->getPreloadedRelationData();
         if ($preloadedData !== null) {
             return $this->processPreloadedData($preloadedData);
         }
-        
+
         return $this->getRelationResults($parentKey);
     }
 
@@ -173,7 +173,7 @@ class HasManyFromApi extends ApiRelation
     {
         $cacheKey = $this->getRelationCacheKey($parentKey);
         $cacheTtl = $this->getCacheTtl();
-        
+
         // Check if we have a cached response
         if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
             $cachedData = Cache::get($cacheKey);
@@ -181,20 +181,39 @@ class HasManyFromApi extends ApiRelation
                 return $this->processApiResponse($cachedData);
             }
         }
-        
+
         try {
-            // Build the endpoint with query parameters
+            // Build the endpoint - handle different endpoint patterns
             $endpoint = $this->endpoint;
-            $queryParams = [$this->foreignKey => $parentKey];
+            $queryParams = [];
             
-            // Make API request
-            $response = $this->getApiClient()->get($endpoint, $queryParams);
-            
+            // Check if endpoint contains parameter placeholders that need substitution
+            if (strpos($endpoint, '{') !== false) {
+                // Replace parameter placeholders like {parent_id} with actual values
+                $endpoint = str_replace('{' . $this->foreignKey . '}', $parentKey, $endpoint);
+                $endpoint = str_replace('{id}', $parentKey, $endpoint);
+            } elseif (strpos($endpoint, $this->foreignKey) !== false && !is_numeric(basename($endpoint))) {
+                // If endpoint contains the foreign key name but not as a number, replace it
+                $endpoint = str_replace($this->foreignKey, $parentKey, $endpoint);
+            } else {
+                // Default: use query parameters
+                $queryParams = [$this->foreignKey => $parentKey];
+            }
+
+            // Make API request with header injection support
+            $requestContext = [
+                'endpoint' => $endpoint,
+                'query_params' => $queryParams,
+                'relation_type' => 'HasManyFromApi',
+                'parent_key' => $parentKey
+            ];
+            $response = $this->getApiClient($requestContext)->get($endpoint, $queryParams);
+
             // Cache the response if caching is enabled
             if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
                 Cache::put($cacheKey, $response, $cacheTtl);
             }
-            
+
             return $this->processApiResponse($response);
         } catch (\Exception $e) {
             // Log the error if configured to do so
@@ -205,7 +224,7 @@ class HasManyFromApi extends ApiRelation
                     'exception' => $e->getMessage(),
                 ]);
             }
-            
+
             return $this->related->newCollection();
         }
     }
@@ -220,17 +239,71 @@ class HasManyFromApi extends ApiRelation
     {
         // Extract items from the response
         $items = $this->extractItemsFromResponse($response);
-        
+
+        // Debug information
+        if (config('api-debug.output.console', false)) {
+            echo "🔄 Processing API response with " . count($items) . " items for " . get_class($this->related) . "\n";
+        }
+
         // Create a collection of models
         $models = [];
-        
+
         foreach ($items as $item) {
-            $model = $this->related->newFromApiResponse($item);
-            if ($model !== null) {
-                $models[] = $model;
+            // Skip non-array items
+            if (!is_array($item)) {
+                continue;
+            }
+
+            // Try to create a model from the data using newFromApiResponse
+            $model = null;
+
+            try {
+                // First attempt: Use newFromApiResponse if available
+                if (method_exists($this->related, 'newFromApiResponse')) {
+                    $model = $this->related->newFromApiResponse($item);
+                }
+
+                // Second attempt: If model is still null, try creating a new instance and filling it
+                if ($model === null) {
+                    $relatedClass = get_class($this->related);
+                    $model = new $relatedClass();
+                    $model->fill($item);
+                    $model->exists = true;
+                }
+
+                // Store API response data in the model for access to nested relations
+                if ($model !== null && method_exists($model, 'setApiResponseData')) {
+                    $model->setApiResponseData($item);
+                }
+
+                // Add to models array if successfully created
+                if ($model !== null) {
+                    $models[] = $model;
+
+                    // Debug information
+                    if (config('api-debug.output.console', false)) {
+                        echo "✅ Created model: " . get_class($model) . "\n";
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log the error if configured to do so
+                if (config('api-model-relations.error_handling.log_errors', true)) {
+                    \Illuminate\Support\Facades\Log::error('Error creating model from API response', [
+                        'exception' => $e->getMessage(),
+                        'item' => $item,
+                    ]);
+                }
+
+                if (config('api-debug.output.console', false)) {
+                    echo "❌ Error creating model: " . $e->getMessage() . "\n";
+                }
             }
         }
-        
+
+        if (config('api-debug.output.console', false)) {
+            echo "✅ Returning collection with " . count($models) . " models\n";
+        }
+
         return $this->related->newCollection($models);
     }
 
@@ -246,16 +319,16 @@ class HasManyFromApi extends ApiRelation
         if (isset($response[0])) {
             return $response;
         }
-        
+
         // Check for common wrapper keys
         $possibleKeys = ['data', 'items', 'results', 'records', 'content'];
-        
+
         foreach ($possibleKeys as $key) {
             if (isset($response[$key]) && is_array($response[$key])) {
                 return $response[$key];
             }
         }
-        
+
         // If we can't find a collection, return an empty array
         return [];
     }
@@ -271,7 +344,7 @@ class HasManyFromApi extends ApiRelation
         $prefix = config('api-model-relations.cache.prefix', 'api_model_');
         $relatedClass = str_replace('\\', '_', get_class($this->related));
         $parentClass = str_replace('\\', '_', get_class($this->parent));
-        
+
         return $prefix . $parentClass . '_' . $relatedClass . '_' . $this->foreignKey . '_' . $parentKey;
     }
 
@@ -336,15 +409,15 @@ class HasManyFromApi extends ApiRelation
     protected function getPreloadedRelationData()
     {
         $relationName = $this->getRelationName();
-        
+
         // Debug: Log what relation name we detected
         if (config('api-debug.output.console', false)) {
             echo "🔍 Detected relation name: '{$relationName}'\n";
         }
-        
+
         // Use direct attribute access to avoid triggering relations
         $attributes = $this->parent->getAttributes();
-        
+
         // Check for common API inclusion patterns
         $possibleKeys = [
             $relationName,
@@ -355,12 +428,12 @@ class HasManyFromApi extends ApiRelation
             'included_' . $relationName,
             'embedded_' . $relationName,
         ];
-        
+
         if (config('api-debug.output.console', false)) {
             echo "🔍 Checking possible keys: " . implode(', ', $possibleKeys) . "\n";
             echo "🔍 Available attributes: " . implode(', ', array_keys($attributes)) . "\n";
         }
-        
+
         // Check direct attributes first (avoid getAttribute to prevent recursion)
         foreach ($possibleKeys as $key) {
             if (isset($attributes[$key]) && is_array($attributes[$key])) {
@@ -370,7 +443,7 @@ class HasManyFromApi extends ApiRelation
                 return $attributes[$key];
             }
         }
-        
+
         // Check nested data structures (common in API responses)
         // Look for data.variants, data.variant, etc.
         if (isset($attributes['data']) && is_array($attributes['data'])) {
@@ -378,7 +451,7 @@ class HasManyFromApi extends ApiRelation
             if (config('api-debug.output.console', false)) {
                 echo "🔍 Checking nested data with keys: " . implode(', ', array_keys($nestedData)) . "\n";
             }
-            
+
             foreach ($possibleKeys as $key) {
                 if (isset($nestedData[$key]) && is_array($nestedData[$key])) {
                     if (config('api-debug.output.console', false)) {
@@ -388,14 +461,14 @@ class HasManyFromApi extends ApiRelation
                 }
             }
         }
-        
+
         // Check if parent has raw API response data with included relationships
         if ($this->parent->hasApiResponseData()) {
             $apiResponse = $this->parent->getApiResponseData();
             if (config('api-debug.output.console', false)) {
                 echo "🔍 Checking API response data with keys: " . implode(', ', array_keys($apiResponse)) . "\n";
             }
-            
+
             // Check direct keys in API response
             foreach ($possibleKeys as $key) {
                 if (isset($apiResponse[$key]) && is_array($apiResponse[$key])) {
@@ -405,7 +478,7 @@ class HasManyFromApi extends ApiRelation
                     return $apiResponse[$key];
                 }
             }
-            
+
             // Check nested data in API response (data.variants, etc.)
             if (isset($apiResponse['data']) && is_array($apiResponse['data'])) {
                 $nestedApiData = $apiResponse['data'];
@@ -419,7 +492,7 @@ class HasManyFromApi extends ApiRelation
                 }
             }
         }
-        
+
         // Check if parent has original attributes with included relationships
         $originalAttributes = $this->parent->getOriginal();
         if (is_array($originalAttributes)) {
@@ -431,7 +504,7 @@ class HasManyFromApi extends ApiRelation
                     return $originalAttributes[$key];
                 }
             }
-            
+
             // Check nested data in original attributes
             if (isset($originalAttributes['data']) && is_array($originalAttributes['data'])) {
                 $nestedOriginalData = $originalAttributes['data'];
@@ -445,11 +518,11 @@ class HasManyFromApi extends ApiRelation
                 }
             }
         }
-        
+
         if (config('api-debug.output.console', false)) {
             echo "❌ No pre-loaded relation data found\n";
         }
-        
+
         return null;
     }
 
@@ -465,7 +538,7 @@ class HasManyFromApi extends ApiRelation
         if (empty($preloadedData)) {
             return $this->related->newCollection();
         }
-        
+
         // If it's a single item, wrap it in an array
         if (isset($preloadedData[0]) === false && !empty($preloadedData)) {
             // Check if this looks like a single model (has keys that aren't numeric)
@@ -474,27 +547,70 @@ class HasManyFromApi extends ApiRelation
                 $preloadedData = [$preloadedData];
             }
         }
-        
+
+        // Debug information
+        if (config('api-debug.output.console', false)) {
+            echo "🔄 Processing " . count($preloadedData) . " preloaded items for " . get_class($this->related) . "\n";
+        }
+
         $models = [];
-        
+
         foreach ($preloadedData as $item) {
-            if (is_array($item)) {
-                // Try to create a model from the data
+            // Skip non-array items
+            if (!is_array($item)) {
+                continue;
+            }
+
+            // Try to create a model from the data
+            $model = null;
+
+            try {
+                // First attempt: Use newFromApiResponse if available
                 if (method_exists($this->related, 'newFromApiResponse')) {
                     $model = $this->related->newFromApiResponse($item);
-                } else {
-                    // Fallback to creating a new instance and filling it
-                    $model = $this->related->newInstance();
+                }
+
+                // Second attempt: If model is still null, try creating a new instance and filling it
+                if ($model === null) {
+                    $relatedClass = get_class($this->related);
+                    $model = new $relatedClass();
                     $model->fill($item);
                     $model->exists = true;
                 }
-                
+
+                // Store API response data in the model for access to nested relations
+                if ($model !== null && method_exists($model, 'setApiResponseData')) {
+                    $model->setApiResponseData($item);
+                }
+
+                // Add to models array if successfully created
                 if ($model !== null) {
                     $models[] = $model;
+
+                    // Debug information
+                    if (config('api-debug.output.console', false)) {
+                        echo "✅ Created model: " . get_class($model) . "\n";
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log the error if configured to do so
+                if (config('api-model-relations.error_handling.log_errors', true)) {
+                    \Illuminate\Support\Facades\Log::error('Error creating model from preloaded data', [
+                        'exception' => $e->getMessage(),
+                        'item' => $item,
+                    ]);
+                }
+
+                if (config('api-debug.output.console', false)) {
+                    echo "❌ Error creating model: " . $e->getMessage() . "\n";
                 }
             }
         }
-        
+
+        if (config('api-debug.output.console', false)) {
+            echo "✅ Returning collection with " . count($models) . " models\n";
+        }
+
         return $this->related->newCollection($models);
     }
 
@@ -507,20 +623,20 @@ class HasManyFromApi extends ApiRelation
     {
         // Try to get the relation name from the debug backtrace
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
-        
+
         foreach ($trace as $frame) {
-            if (isset($frame['function']) && 
-                isset($frame['class']) && 
+            if (isset($frame['function']) &&
+                isset($frame['class']) &&
                 $frame['class'] === get_class($this->parent) &&
                 !in_array($frame['function'], ['get', 'getResults', '__call', 'getAttribute', 'hasManyFromApi', 'belongsToFromApi'])) {
                 return $frame['function'];
             }
         }
-        
+
         // Fallback: try to guess from the endpoint or related model class name
         $relatedClass = get_class($this->related);
         $baseName = class_basename($relatedClass);
-        
+
         // Final fallback - just use 'variants' as most common case
         // Note: We avoid calling getAttribute() here to prevent infinite recursion
         return 'variants';

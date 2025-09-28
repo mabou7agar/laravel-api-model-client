@@ -10,6 +10,7 @@ use MTechStack\LaravelApiModelClient\Traits\ApiModelEvents;
 use MTechStack\LaravelApiModelClient\Traits\ApiModelInterfaceMethods;
 use MTechStack\LaravelApiModelClient\Traits\ApiModelQueries;
 use MTechStack\LaravelApiModelClient\Traits\HasApiAttributes;
+use MTechStack\LaravelApiModelClient\Traits\HasApiHeaders;
 use MTechStack\LaravelApiModelClient\Traits\HasApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\LazyLoadsApiRelationships;
 use MTechStack\LaravelApiModelClient\Traits\HybridDataSource;
@@ -29,12 +30,13 @@ class ApiModel extends Model implements ApiModelInterface
     use ApiModelEvents;
     use ApiModelInterfaceMethods;
     use ApiModelQueries;
+    use HasApiHeaders;
     use HasApiRelationships;
     use LazyLoadsApiRelationships;
     use SyncWithApi;
     use HasOpenApiSchema;
     use HasApiAttributes;  // CRITICAL FIX: Add missing trait for mapApiResponseToAttributes
-    
+
     /**
      * Store the complete API response data separately from model attributes.
      * This prevents attribute pollution while maintaining access to original response.
@@ -42,7 +44,7 @@ class ApiModel extends Model implements ApiModelInterface
      * @var array|null
      */
     protected $apiResponseData = null;
-    
+
     use HybridDataSource {
         // HybridDataSource methods take precedence over other traits
         HybridDataSource::find insteadof ApiModelQueries;
@@ -189,7 +191,7 @@ class ApiModel extends Model implements ApiModelInterface
         $className = class_basename($this);
         return strtolower(Str::plural($className));
     }
-    
+
     /**
      * Set the API response data for this model.
      *
@@ -200,7 +202,7 @@ class ApiModel extends Model implements ApiModelInterface
     {
         $this->apiResponseData = $response;
     }
-    
+
     /**
      * Get the API response data for this model.
      *
@@ -210,7 +212,7 @@ class ApiModel extends Model implements ApiModelInterface
     {
         return $this->apiResponseData;
     }
-    
+
     /**
      * Check if this model has API response data.
      *
@@ -220,7 +222,7 @@ class ApiModel extends Model implements ApiModelInterface
     {
         return $this->apiResponseData !== null;
     }
-    
+
     /**
      * Get a specific key from the API response data.
      *
@@ -233,23 +235,39 @@ class ApiModel extends Model implements ApiModelInterface
         if ($this->apiResponseData === null) {
             return $default;
         }
-        
+
         return Arr::get($this->apiResponseData, $key, $default);
     }
 
     /**
-     * Get the API client instance.
+     * Get the API client instance with injected headers.
      *
+     * @param array $requestContext Additional context for dynamic headers
      * @return \MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface
      */
-    protected function getApiClient()
+    protected function getApiClient(array $requestContext = [])
     {
         $client = App::make('api-client');
+        
         // Ensure base URL is applied even if provider was initialized before config
         $base = config('api-model-client.client.base_url') ?? config('api-model-client.base_url');
         if ($base && method_exists($client, 'setBaseUrl')) {
             $client->setBaseUrl($base);
         }
+        
+        // Inject resolved headers if the client supports it
+        if (method_exists($client, 'setHeaders') || method_exists($client, 'withHeaders')) {
+            $headers = $this->getResolvedApiHeaders($requestContext);
+            
+            if (!empty($headers)) {
+                if (method_exists($client, 'setHeaders')) {
+                    $client->setHeaders($headers);
+                } elseif (method_exists($client, 'withHeaders')) {
+                    $client = $client->withHeaders($headers);
+                }
+            }
+        }
+        
         return $client;
     }
 
@@ -635,8 +653,16 @@ class ApiModel extends Model implements ApiModelInterface
     }
 
     /**
+     * Track which attributes are currently being converted to prevent infinite recursion.
+     *
+     * @var array
+     */
+    protected static $convertingAttributes = [];
+
+    /**
      * Get an attribute from the model.
      * Override to handle relation attributes that should return model collections.
+     * Uses the generic array-to-model conversion from HasApiRelationships trait.
      *
      * @param string $key
      * @return mixed
@@ -644,38 +670,67 @@ class ApiModel extends Model implements ApiModelInterface
     public function getAttribute($key)
     {
         $value = parent::getAttribute($key);
+
+        // Prevent infinite recursion by tracking which attributes are being converted
+        $conversionKey = spl_object_hash($this) . '::' . $key;
         
-        // Check if this is a relation attribute that contains raw array data
-        if (is_array($value) && method_exists($this, $key)) {
-            // Check if the method returns a relation
-            try {
-                $relation = $this->$key();
-                if ($relation instanceof \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi) {
-                    // Convert raw array data to model collection
-                    return $this->convertArrayToModelCollection($value, $relation);
-                } elseif ($relation instanceof \MTechStack\LaravelApiModelClient\Relations\HasOneFromApi) {
-                    // Convert raw array data to single model instance
-                    return $this->convertArrayToModelInstance($value, $relation);
-                }
-            } catch (\Exception $e) {
-                // If there's an error, just return the original value
-            }
+        if (isset(static::$convertingAttributes[$conversionKey])) {
+            // Already converting this attribute, return raw value to prevent recursion
+            return $value;
         }
         
-        return $value;
+        // Mark this attribute as being converted
+        static::$convertingAttributes[$conversionKey] = true;
+        
+        try {
+            // Use the generic conversion logic from HasApiRelationships trait
+            if ($this->shouldConvertToModels($key, $value)) {
+                $result = $this->convertArrayToModelCollection($key, $value);
+                unset(static::$convertingAttributes[$conversionKey]);
+                return $result;
+            }
+
+            // Legacy fallback for existing relation-based conversion
+            if (is_array($value) && method_exists($this, $key)) {
+                // Check if the method returns a relation
+                try {
+                    $relation = $this->$key();
+                    if ($relation instanceof \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi) {
+                        // Convert raw array data to model collection
+                        $result = $this->convertArrayToModelCollectionLegacy($value, $relation);
+                        unset(static::$convertingAttributes[$conversionKey]);
+                        return $result;
+                    } elseif ($relation instanceof \MTechStack\LaravelApiModelClient\Relations\HasOneFromApi) {
+                        // Convert raw array data to single model instance
+                        $result = $this->convertArrayToModelInstance($value, $relation);
+                        unset(static::$convertingAttributes[$conversionKey]);
+                        return $result;
+                    }
+                } catch (\Exception $e) {
+                    // If there's an error, just return the original value
+                }
+            }
+
+            unset(static::$convertingAttributes[$conversionKey]);
+            return $value;
+        } catch (\Exception $e) {
+            // Clean up on any exception
+            unset(static::$convertingAttributes[$conversionKey]);
+            return $value;
+        }
     }
 
     /**
-     * Convert raw array data to a collection of model instances.
+     * Convert raw array data to a collection of model instances (legacy method).
      *
      * @param array $data
      * @param \MTechStack\LaravelApiModelClient\Relations\HasManyFromApi $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    protected function convertArrayToModelCollection(array $data, $relation)
+    protected function convertArrayToModelCollectionLegacy(array $data, $relation)
     {
         $models = [];
-        
+
         foreach ($data as $item) {
             if (is_array($item)) {
                 // Create a model instance from the array data
@@ -685,7 +740,7 @@ class ApiModel extends Model implements ApiModelInterface
                 }
             }
         }
-        
+
         return $relation->getRelated()->newCollection($models);
     }
 
@@ -702,7 +757,7 @@ class ApiModel extends Model implements ApiModelInterface
         if (empty($data)) {
             return null;
         }
-        
+
         // If it's an array of items, take the first one
         if (isset($data[0]) && is_array($data[0])) {
             $itemData = $data[0];
@@ -710,7 +765,7 @@ class ApiModel extends Model implements ApiModelInterface
             // It's a single item
             $itemData = $data;
         }
-        
+
         // Create a model instance from the array data
         return $relation->getRelated()->newFromApiResponse($itemData);
     }

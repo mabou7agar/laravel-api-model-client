@@ -240,12 +240,23 @@ class HasOneFromApi extends ApiRelation
         }
         
         try {
-            // Build the endpoint with query parameters
-            $endpoint = $this->endpoint;
-            $queryParams = [$this->foreignKey => $parentKey];
+            // Build the endpoint with parameter substitution
+            $endpoint = $this->buildEndpointWithParameters($parentKey);
+            $queryParams = [];
             
-            // Make API request
-            $response = $this->getApiClient()->get($endpoint, $queryParams);
+            // If endpoint doesn't contain the parent key as a path parameter, add it as query parameter
+            if (!$this->endpointContainsParameter($endpoint)) {
+                $queryParams = [$this->foreignKey => $parentKey];
+            }
+            
+            // Make API request with header injection support
+            $requestContext = [
+                'endpoint' => $endpoint,
+                'query_params' => $queryParams,
+                'relation_type' => 'HasOneFromApi',
+                'parent_key' => $parentKey
+            ];
+            $response = $this->getApiClient($requestContext)->get($endpoint, $queryParams);
             
             // Cache the response if caching is enabled
             if (config('api-model-relations.cache.enabled', true) && $cacheTtl > 0) {
@@ -258,6 +269,7 @@ class HasOneFromApi extends ApiRelation
             if (config('api-model-relations.error_handling.log_errors', true)) {
                 \Illuminate\Support\Facades\Log::error('Error fetching HasOneFromApi relation', [
                     'endpoint' => $this->endpoint,
+                    'resolved_endpoint' => $endpoint ?? 'failed_to_resolve',
                     'parent_key' => $parentKey,
                     'exception' => $e->getMessage(),
                 ]);
@@ -265,6 +277,46 @@ class HasOneFromApi extends ApiRelation
             
             return null;
         }
+    }
+
+    /**
+     * Build endpoint with parameter substitution.
+     *
+     * @param mixed $parentKey
+     * @return string
+     */
+    protected function buildEndpointWithParameters($parentKey)
+    {
+        $endpoint = $this->endpoint;
+        
+        // Replace common parameter patterns
+        $patterns = [
+            '{' . $this->localKey . '}' => $parentKey,
+            '{' . $this->foreignKey . '}' => $parentKey,
+            '{id}' => $parentKey,
+            '{product_id}' => $parentKey,
+            '{parent_id}' => $parentKey,
+        ];
+        
+        foreach ($patterns as $pattern => $replacement) {
+            if (strpos($endpoint, $pattern) !== false) {
+                $endpoint = str_replace($pattern, $replacement, $endpoint);
+                break;
+            }
+        }
+        
+        return $endpoint;
+    }
+
+    /**
+     * Check if endpoint contains parameter substitution.
+     *
+     * @param string $endpoint
+     * @return bool
+     */
+    protected function endpointContainsParameter($endpoint)
+    {
+        return strpos($endpoint, '{') === false;
     }
 
     /**
