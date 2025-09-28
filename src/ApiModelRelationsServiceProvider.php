@@ -13,7 +13,6 @@ use MTechStack\LaravelApiModelClient\Console\Commands\TestCommand;
 use MTechStack\LaravelApiModelClient\OpenApi\OpenApiSchemaParser;
 use MTechStack\LaravelApiModelClient\Contracts\ApiClientInterface;
 use MTechStack\LaravelApiModelClient\Macros\ApiModelMacros;
-use MTechStack\LaravelApiModelClient\Providers\GlobalMorphToServiceProvider;
 use MTechStack\LaravelApiModelClient\Services\ApiClient;
 use MTechStack\LaravelApiModelClient\Services\ApiPipeline;
 use MTechStack\LaravelApiModelClient\Services\Auth\ApiKeyAuth;
@@ -88,8 +87,6 @@ class ApiModelRelationsServiceProvider extends ServiceProvider
         // Register debug service provider for auto-debug functionality
         $this->app->register(ApiDebugServiceProvider::class);
 
-        // Register global morphTo override service provider
-        $this->app->register(GlobalMorphToServiceProvider::class);
     }
 
     /**

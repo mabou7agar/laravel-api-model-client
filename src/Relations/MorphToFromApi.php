@@ -97,15 +97,13 @@ class MorphToFromApi extends ApiRelation
     }
 
     /**
-     * Add constraints to the query.
+     * Add constraints to the relation (not used for API morphTo).
      *
-     * @param  \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder  $query
-     * @return \MTechStack\LaravelApiModelClient\Query\ApiQueryBuilder
+     * @return void
      */
-    public function addConstraints(ApiQueryBuilder $query)
+    public function addConstraints(): void
     {
-        // This is handled in getResults() for API models
-        return $query;
+        // No-op: constraints are handled in getResults() / getEager()
     }
 
     /**

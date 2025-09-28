@@ -36,31 +36,27 @@ return [
     |--------------------------------------------------------------------------
     |
     | Enable or disable the global morphTo override functionality.
-    | When enabled, any morphTo relationship that targets an ApiModel
-    | will automatically use MorphToFromApi instead of the standard MorphTo.
+    | When enabled, models using the UsesApiMorphTo trait will automatically
+    | fetch ApiModel targets from the API instead of the database.
+    | 
+    | This works for any morphTo relationship using the trait.
     |
     */
     'enable_global_morph_override' => true,
 
     /*
     |--------------------------------------------------------------------------
-    | Morph Relation Names
+    | Additional Morph Names
     |--------------------------------------------------------------------------
     |
-    | List of common morphTo relation names that should be automatically
-    | overridden. Add any custom morph relation names your application uses.
+    | Additional morphTo relation names to register resolvers for.
+    | The system already includes common names like 'entity', 'subject', etc.
+    | Add any custom morph relation names your application uses.
     |
     */
-    'morph_relation_names' => [
-        'entity',
-        'subject', 
-        'target',
-        'owner',
-        'morph',
-        'morphable',
-        'related',
-        'parent',
-        'source',
+    'additional_morph_names' => [
+        // Add custom morph relation names here
+        // 'custom_entity', 'special_morph', etc.
     ],
 
     /*
