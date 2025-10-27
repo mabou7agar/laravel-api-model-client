@@ -1337,11 +1337,118 @@ Product::where('category_id', 1)->clearCache();
 $products = Product::withCacheKey('featured_products')
     ->where('featured', true)
     ->get();
+
+## Polymorphic Relations (morphTo) with API Models
+
+Polymorphic relations are fully supported. To ensure polymorphic targets that are API-backed (extend `ApiModel`) are fetched correctly, use the opt-in `UsesApiMorphTo` trait on the model that defines the morphTo accessor.
+
+### When to use `UsesApiMorphTo`
+
+- __If your model has an attribute like `entity_type`/`entity_id` and a `morphTo` called `entity()`__ and the target might be an API model, add the trait so the accessor can resolve API targets seamlessly.
+- For non-API targets, it falls back to standard Laravel `morphTo` behavior.
+
+### Setup
+
+```php
+use MTechStack\LaravelApiModelClient\Traits\UsesApiMorphTo;
+
+class OrderDetails extends Model
+{
+    use UsesApiMorphTo; // Enables API-aware morphTo resolution
+
+    public function entity()
+    {
+        // Standard morphTo declaration remains
+        return $this->morphTo();
+    }
+}
 ```
+
+### How it works
+
+- __Direct Attribute Accessor__: The trait provides `getEntityAttribute()` that safely reads the raw `entity_type`/`entity_id` using `getOriginal()` to avoid recursion.
+- __ApiModel Detection__: If the resolved class extends `ApiModel`, it fetches via API; otherwise it uses standard Eloquent morphing.
+- __Caching__: Once resolved, the relation is cached on the model instance to prevent repeated API calls within the request lifecycle.
+
+### Morph map configuration (optional)
+
+You can register polymorphic aliases for API models using the package config so short names map to API model classes:
+
+```php
+// config/api-model-client.php
+return [
+    // ...
+    'morph_map' => [
+        'product' => App\Models\Api\Product::class,
+        'category' => App\Models\Api\Category::class,
+    ],
+];
+```
+
+### Quick test in Tinker
+
+```bash
+php artisan tinker --execute="\$o = App\\Models\\Tenant\\OrderDetails::find(13047); \$e = \$o->entity; dump(get_class(\$e), optional(\$e)->id);"
+```
+
+## Hybrid Data Source Modes
+
+The package supports multiple data source modes to balance local database and remote API usage. These modes are defined by `MTechStack\LaravelApiModelClient\Contracts\DataSourceModes`:
+
+- __api_only__: Always use the API for reads/writes.
+- __db_only__: Always use the local database.
+- __hybrid__: Read from DB first, fallback to API if missing.
+- __api_first__: Read from API first, optionally sync to DB.
+- __dual_sync__: Keep DB and API in sync for writes; reads use best source.
+
+### Configure globally
+
+```php
+// config/hybrid-data-source.php
+return [
+    'global_mode' => env('API_MODEL_DATA_SOURCE_MODE', 'hybrid'),
+];
+```
+
+### Configure per model (config)
+
+```php
+// config/hybrid-data-source.php
+return [
+    'models' => [
+        'product' => [
+            'data_source_mode' => 'api_first',
+            'sync_enabled' => true,
+        ],
+    ],
+];
+```
+
+### Configure per model (class property)
+
+```php
+use MTechStack\LaravelApiModelClient\Contracts\DataSourceModes;
+use MTechStack\LaravelApiModelClient\Models\ApiModel;
+
+class Product extends ApiModel
+{
+    protected $apiEndpoint = 'products';
+
+    // Prefer constants from the interface for IDE support & refactor safety
+    protected $dataSourceMode = DataSourceModes::MODE_API_FIRST;
+}
+```
+
+### Notes
+
+- __Trait constants moved__: As of v1.2.x, constants were moved out of the `HybridDataSource` trait into the `DataSourceModes` interface (PHP traits cannot declare constants). Update your imports accordingly.
+- __Safe fallbacks__: If mode is not set, the default is `hybrid`.
+- __Logging__: Enable `APP_DEBUG=true` to see hybrid mode decisions in logs during development.
 
 ## Authentication
 
 The package supports multiple authentication strategies:
+{{ ... }}
 
 ### Bearer Token
 

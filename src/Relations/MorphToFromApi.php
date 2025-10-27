@@ -189,8 +189,15 @@ class MorphToFromApi extends ApiRelation
             // Get the related models from the API
             $related = $instance->whereIn($instance->getKeyName(), array_values($ids))->get();
             
-            // Add the related models to the collection
-            $models = $models->merge($related);
+            // Ensure we're working with an Eloquent Collection
+            if (!$related instanceof Collection) {
+                $related = new Collection($related);
+            }
+            
+            // Add the related models to the collection while maintaining Eloquent Collection type
+            foreach ($related as $model) {
+                $models->push($model);
+            }
         }
 
         return $models;
