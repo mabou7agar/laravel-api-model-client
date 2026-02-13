@@ -43,11 +43,15 @@ trait UsesApiMorphTo
                 // Resolve the target class using morph map
                 $targetClass = Relation::getMorphedModel($morphType) ?: $morphType;
 
-                // If target class extends ApiModel, fetch from API
+                // If target class extends ApiModel, skip standard morphTo
+                // (no DB table exists for API models). Fetch via API instead.
                 if (is_string($targetClass) && class_exists($targetClass) && is_subclass_of($targetClass, ApiModel::class)) {
-                    $entity = $targetClass::find($entityId);
-                    $this->setRelation('entity', $entity);
-                    return $entity;
+                    // Return null for API models — the API client may not be
+                    // configured for this tenant, and ::find() can trigger
+                    // uncatchable OOM via container/event recursion.
+                    // Callers that need the API entity should fetch it explicitly.
+                    $this->setRelation('entity', null);
+                    return null;
                 }
             }
 
@@ -62,6 +66,19 @@ trait UsesApiMorphTo
             return null;
         } finally {
             $this->resolvingEntity = false;
+        }
+    }
+
+    /**
+     * Check if the API client can be resolved without triggering OOM.
+     * Returns false if the api-client binding doesn't exist or will fail.
+     */
+    protected function canResolveApiClient(string $targetClass): bool
+    {
+        try {
+            return app()->bound('api-client') || app()->bound($targetClass);
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 }
