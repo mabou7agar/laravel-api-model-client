@@ -30,23 +30,11 @@ trait ApiModelQueries
      */
     public function newQuery()
     {
-        // Check if we're being called from a morphTo relationship context
-        // by examining the call stack
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10);
-        foreach ($trace as $frame) {
-            if (isset($frame['function']) &&
-                (str_contains($frame['function'], 'newMorphTo') ||
-                 str_contains($frame['function'], 'morphTo') ||
-                 (isset($frame['class']) && str_contains($frame['class'], 'MorphTo')))) {
-                // Return standard Eloquent builder for morphTo relationships
-                return parent::newQuery();
-            }
-        }
-
-        if ($this->isApiModel()) {
-            return $this->newApiQuery();
-        }
-
+        // Always return standard Eloquent Builder from newQuery().
+        // Laravel 11 has strict type hints on relationship methods (newBelongsTo,
+        // newMorphTo, etc.) that reject ApiQueryBuilder. Returning Eloquent Builder
+        // here ensures all relationship resolution works correctly.
+        // API queries should use newApiQuery() or static methods (::where, ::find, etc.)
         return parent::newQuery();
     }
 

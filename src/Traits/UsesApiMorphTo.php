@@ -26,8 +26,8 @@ trait UsesApiMorphTo
         }
         
         // Get the morph type and ID directly from original attributes to avoid infinite loops
-        $morphType = $this->getOriginal('entity_type');
-        $entityId = $this->getOriginal('entity_id');
+        $morphType = $this->getOriginal('entity_type') ?? $this->getAttribute('entity_type');
+        $entityId = $this->getOriginal('entity_id') ?? $this->getAttribute('entity_id');
         
         if ($morphType && $entityId) {
             // Resolve the target class using morph map
@@ -42,7 +42,14 @@ trait UsesApiMorphTo
             }
         }
         
-        // Otherwise use the standard morphTo relationship
-        return $this->getRelationValue('entity');
+        // For non-API models, resolve via the relationship method directly.
+        // Do NOT call getRelationValue('entity') — it re-triggers this accessor → infinite loop.
+        if (method_exists($this, 'entity')) {
+            $entity = $this->entity()->first();
+            $this->setRelation('entity', $entity);
+            return $entity;
+        }
+        
+        return null;
     }
 }
