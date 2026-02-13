@@ -301,33 +301,9 @@ class ApiModel extends Model
         return parent::newQuery();
     }
 
-    public function getAttribute($key)
-    {
-        $value = parent::getAttribute($key);
-
-        // Prevent infinite recursion
-        $conversionKey = spl_object_hash($this) . '::' . $key;
-        if (isset(static::$convertingAttributes[$conversionKey])) {
-            return $value;
-        }
-
-        static::$convertingAttributes[$conversionKey] = true;
-
-        try {
-            // Convert array relationships to model collections
-            if ($this->shouldConvertToModels($key, $value)) {
-                $result = $this->convertArrayToModelCollection($key, $value);
-                unset(static::$convertingAttributes[$conversionKey]);
-                return $result;
-            }
-
-            unset(static::$convertingAttributes[$conversionKey]);
-            return $value;
-        } catch (\Exception $e) {
-            unset(static::$convertingAttributes[$conversionKey]);
-            return $value;
-        }
-    }
+    // getAttribute intentionally NOT overridden — let Eloquent handle it normally.
+    // The old override called shouldConvertToModels() on every access, triggering
+    // heavy accessors (e.g. getSuperAttributesAttribute) in loops.
 
     // ─── Simple Query Builder ────────────────────────────────────
 

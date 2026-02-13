@@ -26,77 +26,10 @@ trait HasApiRelationships
      */
     protected $apiRelationshipModels = [];
 
-    /**
-     * Override getAttribute to automatically convert array relationships to model instances.
-     *
-     * @param  string  $key
-     * @return mixed
-     */
-    public function getAttribute($key)
-    {
-        $value = parent::getAttribute($key);
-
-        // Check if this attribute should be converted to model instances
-        if ($this->shouldConvertToModels($key, $value)) {
-            return $this->convertArrayToModelCollection($key, $value);
-        }
-
-        return $value;
-    }
-
-    /**
-     * Determine if an attribute should be converted to model instances.
-     *
-     * @param  string  $key
-     * @param  mixed   $value
-     * @return bool
-     */
-    protected function shouldConvertToModels($key, $value)
-    {
-        // Skip if value is null or already an object
-        if ($value === null || is_object($value)) {
-            return false;
-        }
-
-        // Skip if not an array
-        if (!is_array($value)) {
-            return false;
-        }
-
-        // Skip if empty array
-        if (empty($value)) {
-            return false;
-        }
-
-        // Check if explicitly configured as a relationship attribute
-        if (in_array($key, $this->apiRelationshipAttributes)) {
-            return true;
-        }
-
-        // Check if has a configured model class
-        if (isset($this->apiRelationshipModels[$key])) {
-            return true;
-        }
-
-        // Auto-detect common relationship patterns
-        $relationshipPatterns = [
-            'variants', 'children', 'items', 'products', 'categories',
-            'tags', 'attributes', 'options', 'reviews', 'comments',
-            'related_products', 'cross_sells', 'up_sells'
-        ];
-
-        if (in_array($key, $relationshipPatterns)) {
-            return true;
-        }
-
-        // Check if the first item in the array looks like model data
-        $firstItem = reset($value);
-        if (is_array($firstItem) && isset($firstItem['id'])) {
-            return true;
-        }
-
-        return false;
-    }
+    // getAttribute intentionally NOT overridden.
+    // The old override called shouldConvertToModels() on every attribute access,
+    // triggering heavy accessors (e.g. getSuperAttributesAttribute) in loops.
+    // Array-to-model conversion should be done explicitly, not on every getAttribute.
 
     /**
      * Convert an array of data to a collection of model instances.
