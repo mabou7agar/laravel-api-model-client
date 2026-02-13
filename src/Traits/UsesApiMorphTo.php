@@ -9,81 +9,139 @@ use MTechStack\LaravelApiModelClient\Models\ApiModel;
  * Trait UsesApiMorphTo
  *
  * Provides automatic API model detection and fetching for morphTo relationships.
- * Simply add this trait to any model with morphTo relationships and it will
- * automatically fetch API models when the target extends ApiModel.
+ * Works with any morphTo relationship — auto-detects all morphTo methods on the model.
+ *
+ * Usage:
+ *   use UsesApiMorphTo;
+ *
+ * The trait auto-discovers morphTo relationships by scanning for methods that
+ * return MorphTo instances. Override $apiMorphRelations to list them explicitly.
  */
 trait UsesApiMorphTo
 {
-    /** @var bool Guard against re-entrant getEntityAttribute calls */
-    protected bool $resolvingEntity = false;
+    /** @var array Guard against re-entrant accessor calls per relation */
+    protected array $resolvingMorphTo = [];
 
     /**
-     * Get the entity attribute with API model override.
-     * This method is called when accessing $model->entity
+     * Override in your model to explicitly list morphTo relation names.
+     * If empty, the trait auto-discovers them.
+     * Example: protected $apiMorphRelations = ['entity', 'commentable'];
      */
-    public function getEntityAttribute()
+    // protected $apiMorphRelations = [];
+
+    /**
+     * Boot the trait — register dynamic accessors for all morphTo relations.
+     */
+    public static function bootUsesApiMorphTo(): void
     {
-        // Check if we already have the entity loaded
-        if (array_key_exists('entity', $this->relations)) {
-            return $this->relations['entity'];
+        // Nothing needed at boot — we use __get override instead.
+    }
+
+    /**
+     * Get the list of morphTo relation names this trait should handle.
+     */
+    protected function getApiMorphRelations(): array
+    {
+        if (property_exists($this, 'apiMorphRelations') && !empty($this->apiMorphRelations)) {
+            return $this->apiMorphRelations;
         }
 
-        // Guard: if we're already resolving, return null to break recursion
-        if ($this->resolvingEntity) {
+        // Auto-discover: check for common morphTo patterns
+        $relations = [];
+        foreach (['entity', 'commentable', 'taggable', 'likeable', 'morphable', 'relatable'] as $name) {
+            if (method_exists($this, $name)) {
+                $relations[] = $name;
+            }
+        }
+
+        // Also check for {name}_type + {name}_id column pairs in fillable
+        $fillable = $this->getFillable();
+        foreach ($fillable as $col) {
+            if (str_ends_with($col, '_type')) {
+                $rel = substr($col, 0, -5); // strip _type
+                if (in_array($rel . '_id', $fillable) && method_exists($this, $rel) && !in_array($rel, $relations)) {
+                    $relations[] = $rel;
+                }
+            }
+        }
+
+        return $relations;
+    }
+
+    /**
+     * Intercept attribute access for morphTo relations.
+     */
+    public function getAttribute($key)
+    {
+        // Only intercept known morphTo relation names
+        if (in_array($key, $this->getApiMorphRelations())) {
+            return $this->resolveApiMorphTo($key);
+        }
+
+        return parent::getAttribute($key);
+    }
+
+    /**
+     * Resolve a morphTo relation, fetching from API if the target is an API model.
+     */
+    protected function resolveApiMorphTo(string $relationName)
+    {
+        // Already loaded
+        if (array_key_exists($relationName, $this->relations)) {
+            return $this->relations[$relationName];
+        }
+
+        // Guard against recursion
+        if (!empty($this->resolvingMorphTo[$relationName])) {
             return null;
         }
-        $this->resolvingEntity = true;
+        $this->resolvingMorphTo[$relationName] = true;
 
         try {
-            // Get the morph type and ID directly from attributes
-            $morphType = $this->getOriginal('entity_type') ?? $this->getAttribute('entity_type');
-            $entityId = $this->getOriginal('entity_id') ?? $this->getAttribute('entity_id');
+            $typeCol = $relationName . '_type';
+            $idCol = $relationName . '_id';
+
+            $morphType = $this->getOriginal($typeCol) ?? $this->getAttribute($typeCol);
+            $entityId = $this->getOriginal($idCol) ?? $this->getAttribute($idCol);
 
             if ($morphType && $entityId) {
-                // Resolve the target class using morph map
                 $targetClass = Relation::getMorphedModel($morphType) ?: $morphType;
 
-                // If target class is an API model, fetch via ::find()
-                // Safe now that ApiModel is lightweight (no heavy traits).
+                // API model — fetch via ::find()
                 if (is_string($targetClass) && $this->looksLikeApiModel($targetClass)) {
                     try {
-                        $entity = $targetClass::find($entityId);
-                        $this->setRelation('entity', $entity);
-                        return $entity;
+                        $result = $targetClass::find($entityId);
+                        $this->setRelation($relationName, $result);
+                        return $result;
                     } catch (\Exception $e) {
-                        $this->setRelation('entity', null);
+                        $this->setRelation($relationName, null);
                         return null;
                     }
                 }
             }
 
-            // For non-API models, resolve via the relationship method directly.
-            // Do NOT call getRelationValue('entity') — it can re-trigger this accessor.
-            if (method_exists($this, 'entity')) {
-                $entity = $this->entity()->first();
-                $this->setRelation('entity', $entity);
-                return $entity;
+            // Non-API model — resolve via the relationship method
+            if (method_exists($this, $relationName)) {
+                $result = $this->{$relationName}()->first();
+                $this->setRelation($relationName, $result);
+                return $result;
             }
 
             return null;
         } finally {
-            $this->resolvingEntity = false;
+            unset($this->resolvingMorphTo[$relationName]);
         }
     }
 
     /**
      * Check if a class looks like an ApiModel without autoloading it.
-     * Uses reflection only if the class is already loaded.
      */
     protected function looksLikeApiModel(string $className): bool
     {
-        // Fast check: if class is already loaded, use is_subclass_of
         if (class_exists($className, false)) {
             return is_subclass_of($className, ApiModel::class);
         }
 
-        // Class not loaded — check by convention (namespace/name patterns)
-        // This avoids autoloading which boots all ApiModel traits and can OOM
         return str_contains($className, '\\Api\\')
             || str_contains($className, '\\ApiModel')
             || str_contains($className, 'ApiModel');
