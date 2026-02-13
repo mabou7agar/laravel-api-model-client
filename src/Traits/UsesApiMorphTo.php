@@ -43,17 +43,14 @@ trait UsesApiMorphTo
                 // Resolve the target class using morph map
                 $targetClass = Relation::getMorphedModel($morphType) ?: $morphType;
 
-                // If target class extends ApiModel, fetch via API
-                // (no DB table exists for API models — morphTo would fail).
+                // If target class extends ApiModel, return null.
+                // API models have no DB table so morphTo() would fail, and
+                // calling ::find() here adds latency (HTTP call) or OOM risk.
+                // Views should use null-safe access ($detail->entity?->title)
+                // or store denormalized data (title, img) on the parent table.
                 if (is_string($targetClass) && class_exists($targetClass) && is_subclass_of($targetClass, ApiModel::class)) {
-                    $entity = null;
-                    try {
-                        $entity = $targetClass::find($entityId);
-                    } catch (\Throwable $e) {
-                        // API unavailable — entity stays null
-                    }
-                    $this->setRelation('entity', $entity);
-                    return $entity;
+                    $this->setRelation('entity', null);
+                    return null;
                 }
             }
 
