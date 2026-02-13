@@ -43,12 +43,17 @@ trait UsesApiMorphTo
                 // Resolve the target class using morph map
                 $targetClass = Relation::getMorphedModel($morphType) ?: $morphType;
 
-                // If target class is an API model, return null.
-                // Avoid class_exists()/is_subclass_of() — autoloading + booting
-                // ApiModel's 12+ traits can exhaust 512MB of memory.
+                // If target class is an API model, fetch via ::find()
+                // Safe now that ApiModel is lightweight (no heavy traits).
                 if (is_string($targetClass) && $this->looksLikeApiModel($targetClass)) {
-                    $this->setRelation('entity', null);
-                    return null;
+                    try {
+                        $entity = $targetClass::find($entityId);
+                        $this->setRelation('entity', $entity);
+                        return $entity;
+                    } catch (\Exception $e) {
+                        $this->setRelation('entity', null);
+                        return null;
+                    }
                 }
             }
 

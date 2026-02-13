@@ -39,6 +39,12 @@ class ApiModel extends Model
      */
     protected static $convertingAttributes = [];
 
+    /**
+     * Request-level cache for find() results.
+     * Prevents duplicate API calls for the same model+id within one request.
+     */
+    protected static array $findCache = [];
+
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
@@ -77,6 +83,12 @@ class ApiModel extends Model
 
     public static function find($id, $columns = ['*'])
     {
+        // Request-level cache — avoid duplicate API calls
+        $cacheKey = static::class . ':' . $id;
+        if (array_key_exists($cacheKey, static::$findCache)) {
+            return static::$findCache[$cacheKey];
+        }
+
         $instance = new static;
 
         try {
@@ -88,10 +100,11 @@ class ApiModel extends Model
                 // Fallback to Http client
                 $base = $instance->getBaseUrl();
                 $url = rtrim($base, '/') . '/' . ltrim($endpoint, '/');
-                $response = Http::timeout(15)->get($url)->json() ?? [];
+                $response = Http::timeout(5)->get($url)->json() ?? [];
             }
 
             if (empty($response)) {
+                static::$findCache[$cacheKey] = null;
                 return null;
             }
 
@@ -99,8 +112,10 @@ class ApiModel extends Model
             if ($model) {
                 $model->exists = true;
             }
+            static::$findCache[$cacheKey] = $model;
             return $model;
         } catch (\Exception $e) {
+            static::$findCache[$cacheKey] = null;
             return null;
         }
     }
