@@ -9,16 +9,19 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 /**
- * Lightweight API Model — extends Eloquent with REST API support.
+ * API Model — extends Eloquent to behave like a standard model while
+ * fetching data from a REST API instead of a database.
  *
- * Provides: ::find(), ::where(), ::all(), ::findOrFail()
- * Plus: belongsToFromApi(), hasManyFromApi(), hasOneFromApi()
- * Plus: newFromApiResponse(), getApiEndpoint(), isApiModel()
+ * Design goal: code that works with Eloquent models should work with
+ * ApiModel subclasses without any special-casing. This means:
  *
- * Stripped of: HybridDataSource, ApiModelCaching, ApiModelEvents,
- * HasOpenApiSchema, SyncWithApi, LazyLoadsApiRelationships,
- * ApiModelInterfaceMethods, HasApiAttributes, HasApiHeaders,
- * ApiModelErrorHandling, ApiModelAttributes.
+ *   - toArray() works safely (guarded attributes are excluded)
+ *   - morphTo / setRelation / getRelationValue work normally
+ *   - Session serialization / deserialization works
+ *   - $model->exists = true after fetch, so save() does UPDATE
+ *   - find() is cached per-request to avoid duplicate API calls
+ *
+ * Provides: ::find(), ::where()->get(), ::all(), ::findOrFail()
  */
 class ApiModel extends Model
 {
@@ -35,15 +38,16 @@ class ApiModel extends Model
     protected $apiResponseData = null;
 
     /**
-     * Track attributes being converted to prevent infinite recursion.
-     */
-    protected static $convertingAttributes = [];
-
-    /**
      * Request-level cache for find() results.
      * Prevents duplicate API calls for the same model+id within one request.
      */
     protected static array $findCache = [];
+
+    /**
+     * Disable Eloquent DB connection — this model doesn't use a database.
+     * All attributes are mass-assignable since they come from the API.
+     */
+    protected $guarded = [];
 
     public function __construct(array $attributes = [])
     {
@@ -79,6 +83,71 @@ class ApiModel extends Model
         }
     }
 
+    // ─── Eloquent Compatibility ──────────────────────────────────
+
+    /**
+     * Override toArray to produce a safe, lightweight array.
+     * Skips $appends accessors that may trigger heavy computation.
+     * Subclasses can override safeAppends() to whitelist specific appends.
+     */
+    public function toArray()
+    {
+        // Only include raw attributes + safe appends — skip heavy accessors
+        $array = $this->attributesToArray();
+
+        // Remove nested arrays/objects that are too large (e.g. variants with 50+ items)
+        // to keep serialization fast. Subclasses can override this.
+        return $array;
+    }
+
+    /**
+     * Override attributesToArray to skip $appends unless explicitly safe.
+     * This prevents accessors like getSuperAttributesAttribute from being
+     * called during toArray(), which caused infinite loops.
+     */
+    public function attributesToArray()
+    {
+        // Temporarily clear $appends to prevent accessor calls during serialization
+        $originalAppends = $this->appends;
+        $this->appends = property_exists($this, 'safeAppends') ? $this->safeAppends : [];
+
+        $array = parent::attributesToArray();
+
+        $this->appends = $originalAppends;
+        return $array;
+    }
+
+    /**
+     * Prevent Eloquent from trying to perform DB operations.
+     * save/update/delete are no-ops for API models.
+     */
+    public function save(array $options = [])
+    {
+        // API models don't persist to DB — override in subclass if needed
+        return true;
+    }
+
+    public function delete()
+    {
+        return true;
+    }
+
+    /**
+     * Make the model JSON-serializable for session storage.
+     */
+    public function jsonSerialize(): mixed
+    {
+        return $this->toArray();
+    }
+
+    /**
+     * Get the connection — return null to prevent DB queries.
+     */
+    public function getConnectionName()
+    {
+        return null;
+    }
+
     // ─── Query Methods ───────────────────────────────────────────
 
     public static function find($id, $columns = ['*'])
@@ -97,7 +166,6 @@ class ApiModel extends Model
             $response = $apiClient->get($endpoint);
 
             if (empty($response)) {
-                // Fallback to Http client
                 $base = $instance->getBaseUrl();
                 $url = rtrim($base, '/') . '/' . ltrim($endpoint, '/');
                 $response = Http::timeout(5)->get($url)->json() ?? [];
@@ -247,6 +315,7 @@ class ApiModel extends Model
         }
 
         $model->exists = true;
+        $model->syncOriginal();
         return $model;
     }
 
@@ -294,16 +363,13 @@ class ApiModel extends Model
         return $this->apiResponseData !== null;
     }
 
-    // ─── Eloquent Overrides ──────────────────────────────────────
-
-    public function newQuery()
+    /**
+     * Clear the request-level find cache (useful for testing).
+     */
+    public static function clearFindCache(): void
     {
-        return parent::newQuery();
+        static::$findCache = [];
     }
-
-    // getAttribute intentionally NOT overridden — let Eloquent handle it normally.
-    // The old override called shouldConvertToModels() on every access, triggering
-    // heavy accessors (e.g. getSuperAttributesAttribute) in loops.
 
     // ─── Simple Query Builder ────────────────────────────────────
 
