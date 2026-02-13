@@ -43,12 +43,10 @@ trait UsesApiMorphTo
                 // Resolve the target class using morph map
                 $targetClass = Relation::getMorphedModel($morphType) ?: $morphType;
 
-                // If target class extends ApiModel, return null.
-                // API models have no DB table so morphTo() would fail, and
-                // calling ::find() here adds latency (HTTP call) or OOM risk.
-                // Views should use null-safe access ($detail->entity?->title)
-                // or store denormalized data (title, img) on the parent table.
-                if (is_string($targetClass) && class_exists($targetClass) && is_subclass_of($targetClass, ApiModel::class)) {
+                // If target class is an API model, return null.
+                // Avoid class_exists()/is_subclass_of() — autoloading + booting
+                // ApiModel's 12+ traits can exhaust 512MB of memory.
+                if (is_string($targetClass) && $this->looksLikeApiModel($targetClass)) {
                     $this->setRelation('entity', null);
                     return null;
                 }
@@ -69,15 +67,20 @@ trait UsesApiMorphTo
     }
 
     /**
-     * Check if the API client can be resolved without triggering OOM.
-     * Returns false if the api-client binding doesn't exist or will fail.
+     * Check if a class looks like an ApiModel without autoloading it.
+     * Uses reflection only if the class is already loaded.
      */
-    protected function canResolveApiClient(string $targetClass): bool
+    protected function looksLikeApiModel(string $className): bool
     {
-        try {
-            return app()->bound('api-client') || app()->bound($targetClass);
-        } catch (\Throwable $e) {
-            return false;
+        // Fast check: if class is already loaded, use is_subclass_of
+        if (class_exists($className, false)) {
+            return is_subclass_of($className, ApiModel::class);
         }
+
+        // Class not loaded — check by convention (namespace/name patterns)
+        // This avoids autoloading which boots all ApiModel traits and can OOM
+        return str_contains($className, '\\Api\\')
+            || str_contains($className, '\\ApiModel')
+            || str_contains($className, 'ApiModel');
     }
 }
