@@ -6,6 +6,7 @@ use MTechStack\LaravelApiModelClient\Relations\HasManyFromApi;
 use MTechStack\LaravelApiModelClient\Relations\HasOneFromApi;
 use MTechStack\LaravelApiModelClient\Relations\BelongsToFromApi;
 use MTechStack\LaravelApiModelClient\Relations\HasManyThroughFromApi;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 trait HasApiRelationships
@@ -169,7 +170,7 @@ trait HasApiRelationships
             $endpoint = $instance->getApiEndpoint();
         }
 
-        return new HasManyFromApi($instance->newQuery(), $this, $endpoint, $foreignKey, $localKey);
+        return new HasManyFromApi($this->relationshipEloquentQuery($instance), $this, $endpoint, $foreignKey, $localKey);
     }
 
     /**
@@ -196,7 +197,7 @@ trait HasApiRelationships
             $endpoint = $instance->getApiEndpoint();
         }
 
-        return new HasOneFromApi($instance->newQuery(), $this, $endpoint, $foreignKey, $localKey);
+        return new HasOneFromApi($this->relationshipEloquentQuery($instance), $this, $endpoint, $foreignKey, $localKey);
     }
 
     /**
@@ -225,7 +226,7 @@ trait HasApiRelationships
             $endpoint = $instance->getApiEndpoint();
         }
 
-        return new BelongsToFromApi($instance->newQuery(), $this, $endpoint, $foreignKey, $ownerKey);
+        return new BelongsToFromApi($this->relationshipEloquentQuery($instance), $this, $endpoint, $foreignKey, $ownerKey);
     }
 
     /**
@@ -264,5 +265,23 @@ trait HasApiRelationships
     protected function newRelatedInstance($class)
     {
         return new $class;
+    }
+
+    /**
+     * Resolve a guaranteed Eloquent builder for relation constructors.
+     *
+     * @param mixed $instance
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function relationshipEloquentQuery($instance): Builder
+    {
+        $query = $instance->newQuery();
+
+        if ($query instanceof Builder) {
+            return $query;
+        }
+
+        // Fallback for older package behavior where newQuery() may return ApiQueryBuilder.
+        return $instance->newModelQuery();
     }
 }
