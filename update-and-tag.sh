@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Laravel AI Engine - Push and Tag Script
-# Automatically pushes changes and updates the osarh tag
+# Automatically pushes changes and updates the v1.2.19 tag
 
 set -e  # Exit on error
 
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo "🚀 Laravel AI Engine - Push and Tag osarh"
+echo "🚀 Laravel AI Engine - Push and Tag v1.2.19"
 echo ""
 
 # Check if we're in a git repository
@@ -26,13 +26,13 @@ CURRENT_BRANCH=$(git branch --show-current)
 echo -e "${BLUE}📍 Current branch: ${YELLOW}${CURRENT_BRANCH}${NC}"
 
 # Tag version
-TAG_VERSION="osarh"
+TAG_VERSION="v1.2.19"
 
 # Check for uncommitted changes
 if [[ -n $(git status -s) ]]; then
     echo -e "${YELLOW}📝 Uncommitted changes detected - committing...${NC}"
     git add .
-    git commit -m "feat: Laravel AI Engine osarh - RAG with Option Cards" || true
+    git commit -m "feat: Laravel AI Engine v1.2.19 - RAG with Option Cards" || true
     echo -e "${GREEN}✅ Changes committed${NC}"
 else
     echo -e "${GREEN}✅ No uncommitted changes${NC}"
@@ -46,7 +46,7 @@ fi
 
 # Create new tag
 echo -e "${BLUE}✨ Creating tag ${YELLOW}${TAG_VERSION}${NC}"
-git tag -a "${TAG_VERSION}" -m "Laravel AI Engine osarh
+git tag -a "${TAG_VERSION}" -m "Laravel AI Engine v1.2.19
 
 Features:
 - RAG (Retrieval-Augmented Generation) with vector search
